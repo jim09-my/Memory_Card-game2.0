@@ -27,7 +27,8 @@ class GameWindow:
         # 创建窗口
         self.window = tk.Toplevel(parent)
         self.window.title("记忆翻牌游戏")
-        self.window.geometry("1200x900")
+        # 使用 1000x800 的窗口大小，适配大部分屏幕
+        self.window.geometry("1000x800")
         self.window.resizable(False, False)
 
         # 卡牌按钮
@@ -36,6 +37,8 @@ class GameWindow:
         # 动画状态
         self.animating = False
         self.selected_cards = []
+        self.pending_resolution_task = None
+        self.pending_mismatch = False
 
         # 更新任务ID
         self.update_task = None
@@ -57,11 +60,15 @@ class GameWindow:
         # 游戏区域
         self._create_game_area()
 
+        # 底部面板（包含控制和道具）
+        self.bottom_panel = tk.Frame(self.window, bg='#ECF0F1')
+        self.bottom_panel.pack(fill=tk.X, side=tk.BOTTOM)
+
         # 控制按钮区
-        self._create_control_panel()
+        self._create_control_panel(self.bottom_panel)
 
         # 道具栏
-        self._create_item_panel()
+        self._create_item_panel(self.bottom_panel)
 
     def _create_top_bar(self):
         """创建顶部信息栏"""
@@ -164,12 +171,13 @@ class GameWindow:
 
     def _create_game_area(self):
         """创建游戏区域"""
-        self.game_frame = tk.Frame(self.window, bg='#ECF0F1')
-        self.game_frame.pack(fill=tk.BOTH, expand=True, padx=20, pady=20)
+        self.game_frame = tk.Frame(self.window, bg='#ECF0F1', relief=tk.SUNKEN, bd=2)
+        self.game_frame.pack(fill=tk.BOTH, expand=True, padx=32, pady=(24, 10))
 
-    def _create_control_panel(self):
+    def _create_control_panel(self, parent=None):
         """创建控制面板"""
-        control_frame = tk.Frame(self.window, bg='#ECF0F1', height=60)
+        parent = parent or self.window
+        control_frame = tk.Frame(parent, bg='#ECF0F1', height=60)
         control_frame.pack(fill=tk.X, padx=20, pady=(0, 10))
         control_frame.pack_propagate(False)
 
@@ -214,10 +222,11 @@ class GameWindow:
         )
         back_btn.pack(side=tk.RIGHT, padx=5)
 
-    def _create_item_panel(self):
+    def _create_item_panel(self, parent=None):
         """创建道具栏"""
-        item_frame = tk.Frame(self.window, bg='#2C3E50', height=70)
-        item_frame.pack(fill=tk.X, side=tk.BOTTOM)
+        parent = parent or self.window
+        item_frame = tk.Frame(parent, bg='#2C3E50', height=90, bd=1, relief=tk.SUNKEN)
+        item_frame.pack(fill=tk.X, padx=16, pady=(0, 10))
         item_frame.pack_propagate(False)
 
         tk.Label(
@@ -226,10 +235,10 @@ class GameWindow:
             font=('Arial', 12, 'bold'),
             bg='#2C3E50',
             fg='white'
-        ).pack(pady=5)
+        ).pack(pady=(6, 2))
 
         items_container = tk.Frame(item_frame, bg='#2C3E50')
-        items_container.pack()
+        items_container.pack(fill=tk.X, padx=10)
 
         # 道具按钮配置
         item_btn_config = {
@@ -310,7 +319,7 @@ class GameWindow:
         # 终极模式按钮
         ultimate_btn = tk.Button(
             selection_window,
-            text="⚡ 终极挑战\n7x7 网格 | 8分钟限时\n奖励: 1200积分",
+            text="⚡ 终极挑战\n6x6 网格 | 8分钟限时\n奖励: 1200积分",
             font=('Arial', 12, 'bold'),
             bg='#D9534F',
             fg='white',
@@ -337,7 +346,7 @@ class GameWindow:
         self.game.start_game()
 
         # 更新UI
-        mode_text = "普通模式 (4x4)" if mode == 'normal' else "终极挑战 (7x7)"
+        mode_text = "普通模式 (4x4)" if mode == 'normal' else "终极挑战 (6x6)"
         self.mode_label.config(text=f"模式: {mode_text}")
 
         # 创建卡牌网格
@@ -363,18 +372,47 @@ class GameWindow:
 
         grid_size = self.game.grid_size
 
-        # 计算卡牌大小
-        available_width = 850
-        available_height = 450
+        # 获取游戏区域的实际大小
+        self.window.update_idletasks()
+        self.game_frame.update_idletasks()
+        available_width = self.game_frame.winfo_width()
+        available_height = self.game_frame.winfo_height()
 
-        card_size = min(
-            (available_width - (grid_size + 1) * 10) // grid_size,
-            (available_height - (grid_size + 1) * 10) // grid_size
-        )
+        # 如果还没有实际大小，使用估算值（根据窗口大小和布局计算）
+        # 窗口1000x800，减去顶部80，控制面板60，道具栏70，padding 40
+        if available_width <= 1:
+            available_width = 960
+        if available_height <= 1:
+            available_height = 590
 
-        # 创建居中容器
+        # 计算卡牌大小（考虑间距），让所有卡牌在可视区域内完全显示
+        padding = 1
+        container_pad_x = 16
+        container_pad_y = 12
+        usable_width = max(available_width - container_pad_x * 2, grid_size)
+        usable_height = max(available_height - container_pad_y * 2, grid_size)
+        max_card_width = (usable_width - (grid_size + 1) * padding) // grid_size
+        max_card_height = (usable_height - (grid_size + 1) * padding) // grid_size
+
+        # 控制目标大小，保证所有卡片可以显示并略小
+        target_size = 60 if grid_size <= 4 else 44
+        min_size = 28 if grid_size <= 4 else 22
+        card_size = max(min_size, min(target_size, max_card_width, max_card_height))
+
+        # 计算按钮的字符宽度和高度（tkinter Button的width/height是字符单位）
+        # 粗略估算：1字符宽度≈8像素，1字符高度≈16像素
+        btn_width = max(2, int(card_size / 10))
+        btn_height = max(2, int(card_size / 20))
+
+        # 字体大小根据卡牌大小调整（确保文字清晰可见）
+        if grid_size <= 4:
+            font_size = max(10, min(16, int(card_size * 0.28)))
+        else:
+            font_size = max(8, min(14, int(card_size * 0.26)))
+
+        # 单一容器，卡片从 game_frame 顶部开始铺满，避免上下裁切
         container = tk.Frame(self.game_frame, bg='#ECF0F1')
-        container.place(relx=0.5, rely=0.5, anchor=tk.CENTER)
+        container.pack(fill=tk.BOTH, expand=True, padx=16, pady=12)
 
         # 创建卡牌按钮
         for row in range(grid_size):
@@ -385,26 +423,41 @@ class GameWindow:
                 btn = tk.Button(
                     container,
                     text="?",
-                    font=('Arial', int(card_size * 0.4), 'bold'),
-                    width=card_size // 10,
-                    height=card_size // 20,
+                    font=('Arial', font_size, 'bold'),
+                    width=btn_width,
+                    height=btn_height,
                     bg='#3498DB',
                     fg='white',
                     relief=tk.RAISED,
-                    bd=3,
+                    bd=2,
                     command=lambda idx=card_index: self._on_card_click(idx)
                 )
-                btn.grid(row=row, column=col, padx=5, pady=5)
+                btn.grid(row=row, column=col, padx=padding//2, pady=padding//2, sticky='nsew')
                 row_buttons.append(btn)
 
             self.card_buttons.extend(row_buttons)
+
+        # 配置grid权重，使按钮能够均匀拉伸填满容器
+        for i in range(grid_size):
+            container.grid_rowconfigure(i, weight=1)
+            container.grid_columnconfigure(i, weight=1)
 
     def _on_card_click(self, card_index):
         """
         卡牌点击事件
         :param card_index: 卡牌索引
         """
-        if not self.game or self.animating or self.game.is_paused:
+        if not self.game or self.game.is_paused:
+            return
+
+        if self.animating and self.pending_resolution_task:
+            self.window.after_cancel(self.pending_resolution_task)
+            self.pending_resolution_task = None
+            self.pending_mismatch = False
+            self.animating = False
+            self._handle_match_result()
+
+        if self.animating:
             return
 
         # 检查是否可以翻牌
@@ -412,14 +465,13 @@ class GameWindow:
         if not card or not card.can_flip():
             return
 
-        # 翻牌
         if self.game.flip_card(card_index):
             self._update_card_display(card_index)
 
-            # 如果已经翻开两张卡牌，等待动画
             if len(self.game.flipped_cards) == 2:
                 self.animating = True
-                self.window.after(1000, self._handle_match_result)
+                self.pending_resolution_task = self.window.after(1000, self._handle_match_result)
+                self.pending_mismatch = True
 
     def _handle_match_result(self):
         """处理配对结果"""
@@ -427,18 +479,23 @@ class GameWindow:
             return
 
         # 检查是否匹配
-        if len(self.game.flipped_cards) == 2:
-            idx1, idx2 = self.game.flipped_cards
-            card1 = self.game.cards[idx1]
-            card2 = self.game.cards[idx2]
-
-            if not card1.is_matched:
-                # 不匹配，翻回
-                self.game.flip_back_cards()
+        if self.pending_resolution_task:
+            self.pending_resolution_task = None
+        pair, matched = self.game.get_last_pair()
+        if pair:
+            idx1, idx2 = pair
+            if matched:
+                self._hide_matched_card(idx1)
+                self._hide_matched_card(idx2)
+            else:
+                self.game.flip_back_cards(pair)
                 self._update_card_display(idx1)
                 self._update_card_display(idx2)
+        self.game.clear_last_pair()
+        self.game.clear_flipped_cards()
 
         self.animating = False
+        self.pending_mismatch = False
 
         # 检查游戏是否完成
         if self.game.is_completed:
@@ -458,38 +515,42 @@ class GameWindow:
         btn = self.card_buttons[card_index]
 
         if card.is_matched:
-            # 已配对：绿色背景，显示✓
-            btn.config(
-                text="✓",
-                bg='#5CB85C',
-                fg='white',
-                relief=tk.SUNKEN,
-                state=tk.DISABLED
-            )
-        elif card.is_flipped:
-            # 已翻开：白色背景，显示值
+            self._hide_matched_card(card_index)
+            return
+
+        if card.is_flipped:
             btn.config(
                 text=str(card.value),
                 bg='white',
                 fg='#34495E',
                 relief=tk.SUNKEN
             )
-        elif card.is_revealed:
-            # 提示显示：黄色边框
+            return
+
+        if card.is_revealed:
             btn.config(
                 text="💡",
                 bg='#F0AD4E',
                 fg='white',
                 relief=tk.RAISED
             )
-        else:
-            # 背面：蓝色背景
-            btn.config(
-                text="?",
-                bg='#3498DB',
-                fg='white',
-                relief=tk.RAISED
-            )
+            return
+
+        btn.config(
+            text="?",
+            bg='#3498DB',
+            fg='white',
+            relief=tk.RAISED
+        )
+
+    def _hide_matched_card(self, card_index):
+        """让已配对的按钮视觉上消失"""
+        if card_index >= len(self.card_buttons):
+            return
+
+        btn = self.card_buttons[card_index]
+        btn.config(text="", bg=self.game_frame['bg'], relief=tk.FLAT, state=tk.DISABLED)
+        btn.grid_remove()
 
     def _update_game_state(self):
         """更新游戏状态（定时调用）"""

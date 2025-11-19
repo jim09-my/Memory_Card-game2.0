@@ -21,8 +21,10 @@ for dir_path in [DATA_DIR, ASSETS_DIR, IMAGES_DIR, SOUNDS_DIR]:
 class GameConfig:
     """游戏基础配置"""
     NORMAL_GRID = 4  # 普通模式网格大小
-    ULTIMATE_GRID = 7  # 终极模式网格大小
-    ULTIMATE_TIME_LIMIT = 480  # 终极模式时间限制（秒）
+    ULTIMATE_GRID = 6  # 终极模式网格大小
+    NORMAL_TIME_LIMIT = None
+    ULTIMATE_TIME_LIMIT = 120  # 终极挑战-非洗牌模式时间限制
+    ULTIMATE_SHUFFLE_TIME_LIMIT = 180  # 终极挑战-洗牌模式时间限制
 
     CARD_SIZE = 20  # 卡牌大小
     CARD_PADDING = 10  # 卡牌间距

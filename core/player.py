@@ -11,13 +11,15 @@ from datetime import datetime, timedelta
 class Player:
     """玩家类"""
 
-    def __init__(self, username, email=''):
+    def __init__(self, username, password='', email=''):
         """
         初始化玩家
         :param username: 用户名
-        :param email: 邮箱
+        :param password: 登录密码
+        :param email: 邮箱（兼容旧数据）
         """
         self.username = username
+        self.password = password
         self.email = email
         self.points = 500  # 初始积分
         self.level = 1
@@ -242,6 +244,7 @@ class Player:
         return {
             'username': self.username,
             'email': self.email,
+            'password': self.password,
             'points': self.points,
             'level': self.level,
             'experience': self.experience,
@@ -264,7 +267,7 @@ class Player:
     @classmethod
     def from_dict(cls, data):
         """从字典创建玩家"""
-        player = cls(data['username'], data.get('email', ''))
+        player = cls(data['username'], data.get('password', ''), data.get('email', ''))
         player.points = data.get('points', 500)
         player.level = data.get('level', 1)
         player.experience = data.get('experience', 0)

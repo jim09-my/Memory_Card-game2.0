@@ -82,6 +82,11 @@ class LoginWindow:
         self.login_username = tk.Entry(parent, font=('Arial', 12), width=25)
         self.login_username.pack(pady=5)
 
+        # 密码
+        tk.Label(parent, text="密码:", font=('Arial', 12)).pack(pady=(10, 5))
+        self.login_password = tk.Entry(parent, font=('Arial', 12), width=25, show='*')
+        self.login_password.pack(pady=5)
+
         # 登录按钮
         login_btn = tk.Button(
             parent,
@@ -98,7 +103,7 @@ class LoginWindow:
         # 提示信息
         tip_label = tk.Label(
             parent,
-            text="提示：首次使用请先注册账号",
+            text="提示：首次使用请先注册账号和密码",
             font=('Arial', 10),
             fg='gray'
         )
@@ -111,10 +116,10 @@ class LoginWindow:
         self.register_username = tk.Entry(parent, font=('Arial', 12), width=25)
         self.register_username.pack(pady=5)
 
-        # 邮箱
-        tk.Label(parent, text="邮箱 (可选):", font=('Arial', 12)).pack(pady=(10, 5))
-        self.register_email = tk.Entry(parent, font=('Arial', 12), width=25)
-        self.register_email.pack(pady=5)
+        # 密码
+        tk.Label(parent, text="密码:", font=('Arial', 12)).pack(pady=(10, 5))
+        self.register_password = tk.Entry(parent, font=('Arial', 12), width=25, show='*')
+        self.register_password.pack(pady=5)
 
         # 注册按钮
         register_btn = tk.Button(
@@ -141,9 +146,10 @@ class LoginWindow:
     def _handle_login(self):
         """处理登录"""
         username = self.login_username.get().strip()
+        password = self.login_password.get().strip()
 
-        if not username:
-            messagebox.showwarning("提示", "请输入用户名")
+        if not username or not password:
+            messagebox.showwarning("提示", "请输入用户名和密码")
             return
 
         # 检查用户是否存在
@@ -153,6 +159,11 @@ class LoginWindow:
 
         # 加载玩家数据
         player = Player.from_dict(self.players_db[username])
+        stored_password = player.password or self.players_db[username].get('password', '')
+        if stored_password and stored_password != password:
+            messagebox.showerror("错误", "用户名或密码错误")
+            return
+
         player.update_login()
 
         # 保存更新后的登录信息
@@ -167,15 +178,19 @@ class LoginWindow:
     def _handle_register(self):
         """处理注册"""
         username = self.register_username.get().strip()
-        email = self.register_email.get().strip()
+        password = self.register_password.get().strip()
 
-        if not username:
-            messagebox.showwarning("提示", "请输入用户名")
+        if not username or not password:
+            messagebox.showwarning("提示", "请输入用户名和密码")
             return
 
         # 检查用户名长度
         if len(username) < 3:
             messagebox.showwarning("提示", "用户名至少3个字符")
+            return
+
+        if len(password) < 6:
+            messagebox.showwarning("提示", "密码至少6个字符")
             return
 
         # 检查用户是否已存在
@@ -184,7 +199,7 @@ class LoginWindow:
             return
 
         # 创建新玩家
-        player = Player(username, email)
+        player = Player(username, password)
 
         # 保存玩家数据
         self._save_player(player)

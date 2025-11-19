@@ -17,9 +17,138 @@
     },
     "achievements": [],
     "created_at": 1763481646.6303117,
-    "last_login": 1763527324.5807333,
+    "last_login": 1763548377.121644,
     "consecutive_days": 1,
     "game_records": [],
+    "benefits": {
+      "free_hint_redeemed": true
+    }
+  },
+  "1234": {
+    "username": "1234",
+    "email": "",
+    "password": "123456",
+    "points": 2545,
+    "level": 3,
+    "experience": 0,
+    "total_points_earned": 2045,
+    "total_games": 6,
+    "completed_games": 5,
+    "total_moves": 279,
+    "total_time": 0,
+    "best_time_normal": 0,
+    "best_time_ultimate": 0,
+    "items": {
+      "hint": 1
+    },
+    "achievements": [],
+    "created_at": 1763548912.416925,
+    "last_login": 1763556105.2976146,
+    "consecutive_days": 1,
+    "game_records": [
+      {
+        "mode": "normal",
+        "grid_size": 4,
+        "completed": true,
+        "time_used": 0,
+        "moves": 19,
+        "mistakes": 11,
+        "score": 72,
+        "reward": 245,
+        "items_used": {
+          "hint": 0,
+          "time_extend": 0,
+          "shuffle_prevent": 0,
+          "undo": 0
+        },
+        "timestamp": 1763551861.0165246
+      },
+      {
+        "mode": "ultimate",
+        "grid_size": 6,
+        "completed": false,
+        "time_used": 0,
+        "moves": 98,
+        "mistakes": 89,
+        "score": 31,
+        "reward": 0,
+        "items_used": {
+          "hint": 0,
+          "time_extend": 0,
+          "shuffle_prevent": 0,
+          "undo": 0
+        },
+        "timestamp": 1763551996.5372508
+      },
+      {
+        "mode": "normal",
+        "grid_size": 4,
+        "completed": true,
+        "time_used": 0,
+        "moves": 27,
+        "mistakes": 19,
+        "score": 69,
+        "reward": 205,
+        "items_used": {
+          "hint": 0,
+          "time_extend": 0,
+          "shuffle_prevent": 0,
+          "undo": 0
+        },
+        "timestamp": 1763552065.733234
+      },
+      {
+        "mode": "ultimate",
+        "grid_size": 6,
+        "completed": true,
+        "time_used": 0,
+        "moves": 85,
+        "mistakes": 67,
+        "score": 116,
+        "reward": 1165,
+        "items_used": {
+          "hint": 0,
+          "time_extend": 0,
+          "shuffle_prevent": 0,
+          "undo": 0
+        },
+        "timestamp": 1763552203.6575565
+      },
+      {
+        "mode": "normal",
+        "grid_size": 4,
+        "completed": true,
+        "time_used": 0,
+        "moves": 22,
+        "mistakes": 14,
+        "score": 68,
+        "reward": 230,
+        "items_used": {
+          "hint": 0,
+          "time_extend": 0,
+          "shuffle_prevent": 0,
+          "undo": 0
+        },
+        "timestamp": 1763552940.7708902
+      },
+      {
+        "mode": "normal",
+        "grid_size": 4,
+        "completed": true,
+        "time_used": 0,
+        "moves": 28,
+        "mistakes": 20,
+        "score": 64,
+        "reward": 200,
+        "items_used": {
+          "hint": 0,
+          "time_extend": 0,
+          "shuffle_prevent": 0,
+          "undo": 0
+        },
+        "timestamp": 1763553409.949095
+      }
+    ],
     "benefits": {
       "free_hint_redeemed": true
     }

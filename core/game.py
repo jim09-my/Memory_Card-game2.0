@@ -26,12 +26,23 @@ class Game:
         if mode == 'normal':
             self.grid_size = 4
             self.time_limit = None
-        else:  # ultimate
-            self.grid_size = 7
-            self.time_limit = 480  # 8分钟
+            self.shuffle_enabled = False
+        elif mode == 'ultimate':
+            self.grid_size = 6
+            self.time_limit = 120  # 2分钟
+            self.shuffle_enabled = False
+        elif mode == 'ultimate_shuffle':
+            self.grid_size = 6
+            self.time_limit = 180  # 3分钟
+            self.shuffle_enabled = True
+        else:
+            raise ValueError(f"未知的游戏模式：{mode}")
 
-        # 游戏状态
-        self.cards = []
+        self.shuffle_failures = 0
+        self.shuffle_status = None
+        self.pending_shuffle_prevention = False
+        self.last_pair = None
+        self.last_match = None
         self.flipped_cards = []
         self.matched_pairs = 0
         self.moves = 0
@@ -143,15 +154,17 @@ class Game:
         # 保存状态（用于撤销）
         self._save_state()
 
-        if card1.value == card2.value:
+        pair = (idx1, idx2)
+        match = card1.value == card2.value
+        if match:
             # 匹配成功
             card1.match()
             card2.match()
             self.matched_pairs += 1
             self.score += 10
 
-            print(f"✓ 配对成功！已完成 {self.matched_pairs}/{self.get_total_pairs()}")
-
+            print(f"OK 配对成功！已完成 {self.matched_pairs}/{self.get_total_pairs()}")
+            
             # 检查是否完成
             if self.matched_pairs == self.get_total_pairs():
                 self.complete_game()
@@ -159,17 +172,20 @@ class Game:
             # 匹配失败
             self.mistakes += 1
             self.score = max(0, self.score - 1)
-            print(f"✗ 配对失败")
+            print(f"X 配对失败")
 
-        # 清空翻开的卡牌列表
-        self.flipped_cards = []
+        self.last_pair = pair
+        self.last_match = match
 
-    def flip_back_cards(self):
+    def flip_back_cards(self, pair=None):
         """将未匹配的卡牌翻回"""
-        for idx in self.flipped_cards:
+        targets = pair if pair is not None else self.flipped_cards
+        for idx in targets:
             card = self.cards[idx]
             if not card.is_matched:
                 card.flip_down()
+
+    def clear_flipped_cards(self):
         self.flipped_cards = []
 
     def _save_state(self):
@@ -422,6 +438,13 @@ class Game:
             base_reward += 500
 
         return max(base_reward, 100)
+
+    def get_last_pair(self):
+        return self.last_pair, self.last_match
+
+    def clear_last_pair(self):
+        self.last_pair = None
+        self.last_match = None
 
     def get_total_pairs(self):
         """获取总对数"""
