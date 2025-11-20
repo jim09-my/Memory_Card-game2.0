@@ -32,5 +32,41 @@
       "undo": 0
     },
     "timestamp": 1763631163
+  },
+  {
+    "mode": "normal",
+    "grid_size": 4,
+    "username": "123",
+    "completed": true,
+    "time_used": 42,
+    "moves": 52,
+    "mistakes": 44,
+    "score": 51,
+    "reward": 100,
+    "items_used": {
+      "hint": 0,
+      "time_extend": 0,
+      "shuffle_prevent": 0,
+      "undo": 0
+    },
+    "timestamp": 1763634203
+  },
+  {
+    "mode": "normal",
+    "grid_size": 4,
+    "username": "123",
+    "completed": true,
+    "time_used": 23,
+    "moves": 26,
+    "mistakes": 18,
+    "score": 63,
+    "reward": 210,
+    "items_used": {
+      "hint": 0,
+      "time_extend": 0,
+      "shuffle_prevent": 0,
+      "undo": 0
+    },
+    "timestamp": 1763643990
   }
 ]

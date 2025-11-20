@@ -3,14 +3,14 @@
     "username": "123",
     "email": "123",
     "password": "",
-    "points": 750,
+    "points": 1060,
     "level": 2,
     "experience": 0,
-    "total_points_earned": 1150,
-    "total_games": 2,
-    "completed_games": 2,
-    "total_moves": 46,
-    "total_time": 37,
+    "total_points_earned": 1460,
+    "total_games": 4,
+    "completed_games": 4,
+    "total_moves": 124,
+    "total_time": 102,
     "best_time_normal": 16,
     "best_time_ultimate": null,
     "items": {},
@@ -19,7 +19,7 @@
       "speed_king"
     ],
     "created_at": 1763481646.6303117,
-    "last_login": 1763632464.824583,
+    "last_login": 1763643956.771863,
     "consecutive_days": 2,
     "game_records": [
       {
@@ -56,6 +56,42 @@
           "undo": 0
         },
         "timestamp": 1763631163.526287
+      },
+      {
+        "mode": "normal",
+        "grid_size": 4,
+        "username": "123",
+        "completed": true,
+        "time_used": 42,
+        "moves": 52,
+        "mistakes": 44,
+        "score": 51,
+        "reward": 100,
+        "items_used": {
+          "hint": 0,
+          "time_extend": 0,
+          "shuffle_prevent": 0,
+          "undo": 0
+        },
+        "timestamp": 1763634203.6968527
+      },
+      {
+        "mode": "normal",
+        "grid_size": 4,
+        "username": "123",
+        "completed": true,
+        "time_used": 23,
+        "moves": 26,
+        "mistakes": 18,
+        "score": 63,
+        "reward": 210,
+        "items_used": {
+          "hint": 0,
+          "time_extend": 0,
+          "shuffle_prevent": 0,
+          "undo": 0
+        },
+        "timestamp": 1763643990.0161147
       }
     ],
     "benefits": {

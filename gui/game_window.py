@@ -9,6 +9,8 @@ import random
 from core.game import Game
 from config import GameConfig, UIConfig, PointsConfig, ItemConfig
 from managers.data_manager import save_player
+from gui.widgets import RoundButton
+from tkinter import ttk
 
 class GameWindow:
     """游戏窗口类"""
@@ -85,6 +87,12 @@ class GameWindow:
 
         # 道具栏
         self._create_item_panel(self.bottom_panel)
+
+        # 统一风格
+        try:
+            self._unify_global_style()
+        except Exception:
+            pass
 
     def _center_window(self):
         """把当前窗口居中到屏幕中央"""
@@ -206,6 +214,33 @@ class GameWindow:
         """创建游戏区域"""
         self.game_frame = tk.Frame(self.window, bg='#ECF0F1', relief=tk.SUNKEN, bd=2)
         self.game_frame.pack(fill=tk.BOTH, expand=True, padx=32, pady=(24, 10))
+
+    def _unify_global_style(self):
+        """应用全局色彩和样式规范"""
+        try:
+            style = ttk.Style()
+            style.configure('Game.TFrame', background=UIConfig.COLORS.get('primary', '#4ECDC4'))
+            style.configure('Card.TButton', background='#FFE66D', foreground='#333333', font=('Arial', 12, 'bold'))
+        except Exception:
+            pass
+        try:
+            self.game_frame.config(bg=UIConfig.COLORS.get('primary', '#4ECDC4'))
+        except Exception:
+            pass
+
+    def _draw_grid_pattern(self, canvas):
+        """在卡牌背景 Canvas 上绘制简单的网格/纹理"""
+        try:
+            w = canvas.winfo_width() or canvas['width'] if 'width' in canvas.keys() else canvas.winfo_reqwidth()
+            h = canvas.winfo_height() or canvas['height'] if 'height' in canvas.keys() else canvas.winfo_reqheight()
+            # draw light diagonal lines
+            step = 20
+            for x in range(0, int(w)+step, step):
+                canvas.create_line(x, 0, x - int(h), h, fill='#E6F6F2')
+            for x in range(0, int(w)+step, step):
+                canvas.create_line(x, 0, x + int(h), h, fill='#E6F6F2')
+        except Exception:
+            pass
 
     def _create_control_panel(self, parent=None):
         """创建控制面板"""
@@ -379,7 +414,7 @@ class GameWindow:
 
     def _create_card_grid(self):
         """创建卡牌网格"""
-        # 清空之前的卡牌
+        # 清空之前的卡牌区域
         for widget in self.game_frame.winfo_children():
             widget.destroy()
 
@@ -387,80 +422,42 @@ class GameWindow:
 
         grid_size = self.game.grid_size
 
-        # 获取游戏区域的实际大小
-        self.window.update_idletasks()
-        self.game_frame.update_idletasks()
-        available_width = self.game_frame.winfo_width()
-        available_height = self.game_frame.winfo_height()
+        # 使用固定卡牌尺寸与间距以保证视觉一致
+        card_size = 80 if grid_size <= 4 else 64
+        padding = 10
 
-        # 如果还没有实际大小，使用估算值（根据窗口大小和布局计算）
-        # 窗口1000x800，减去顶部80，控制面板60，道具栏70，padding 40
-        if available_width <= 1:
-            available_width = 960
-        if available_height <= 1:
-            available_height = 590
+        # 创建带纹理的背景 Canvas
+        bg_canvas = tk.Canvas(self.game_frame, bg=UIConfig.COLORS.get('primary', '#4ECDC4'), highlightthickness=0)
+        bg_canvas.pack(fill=tk.BOTH, expand=True, padx=16, pady=12)
 
-        # 计算卡牌大小（考虑间距），让所有卡牌在可视区域内完全显示
-        padding = 1
-        container_pad_x = 16
-        container_pad_y = 12
-        usable_width = max(available_width - container_pad_x * 2, grid_size)
-        usable_height = max(available_height - container_pad_y * 2, grid_size)
-        max_card_width = (usable_width - (grid_size + 1) * padding) // grid_size
-        max_card_height = (usable_height - (grid_size + 1) * padding) // grid_size
+        # 绘制简易纹理
+        try:
+            bg_canvas.update_idletasks()
+            self._draw_grid_pattern(bg_canvas)
+        except Exception:
+            pass
 
-        # 控制目标大小，保证所有卡片可以显示并略小
-        target_size = 60 if grid_size <= 4 else 44
-        min_size = 28 if grid_size <= 4 else 22
-        card_size = max(min_size, min(target_size, max_card_width, max_card_height))
-
-        # 计算按钮的字符宽度和高度（tkinter Button的width/height是字符单位）
-        # 粗略估算：1字符宽度≈8像素，1字符高度≈16像素
-        btn_width = max(2, int(card_size / 10))
-        btn_height = max(2, int(card_size / 20))
-
-        # 字体大小根据卡牌大小调整（确保文字清晰可见）
-        if grid_size <= 4:
-            font_size = max(10, min(16, int(card_size * 0.28)))
-        else:
-            font_size = max(8, min(14, int(card_size * 0.26)))
-
-        # 单一容器，卡片从 game_frame 顶部开始铺满，避免上下裁切
-        container = tk.Frame(self.game_frame, bg='#ECF0F1')
-        container.pack(fill=tk.BOTH, expand=True, padx=16, pady=12)
-
-        # 创建卡牌按钮
+        # 计算起始偏移，使网格居中
+        total_w = grid_size * card_size + (grid_size + 1) * padding
+        total_h = grid_size * card_size + (grid_size + 1) * padding
+        # place grid starting at padding (left/top)
         for row in range(grid_size):
-            row_buttons = []
             for col in range(grid_size):
                 card_index = row * grid_size + col
+                x = padding + col * (card_size + padding)
+                y = padding + row * (card_size + padding)
 
-                btn = tk.Button(
-                    container,
-                    text="?",
-                    font=('Arial', font_size, 'bold'),
-                    width=btn_width,
-                    height=btn_height,
-                    bg='#3498DB',
-                    fg='white',
-                    relief=tk.RAISED,
-                    bd=2,
-                    command=lambda idx=card_index: self._on_card_click(idx)
-                )
-                btn.grid(row=row, column=col, padx=padding//2, pady=padding//2, sticky='nsew')
-                # 标记为未隐藏（用于后续隐藏保护）
-                try:
-                    btn._hidden = False
-                except Exception:
-                    pass
-                row_buttons.append(btn)
+                # create RoundButton
+                rb = RoundButton(bg_canvas, width=card_size, height=card_size, corner_radius=8,
+                                 bg='#FFE66D', fg='#333333', text='?', font=('Arial', int(card_size*0.28), 'bold'),
+                                 command=lambda idx=card_index: self._on_card_click(idx))
 
-            self.card_buttons.extend(row_buttons)
+                # initial back: use card back color
+                rb.config(bg=UIConfig.COLORS.get('card_back', '#3498DB'), fg='white', text='?')
 
-        # 配置grid权重，使按钮能够均匀拉伸填满容器
-        for i in range(grid_size):
-            container.grid_rowconfigure(i, weight=1)
-            container.grid_columnconfigure(i, weight=1)
+                # place on canvas
+                bg_canvas.create_window(x, y, window=rb, anchor=tk.NW)
+                self.card_buttons.append(rb)
 
     def _on_card_click(self, card_index):
         """
