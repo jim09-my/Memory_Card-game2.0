@@ -113,12 +113,14 @@ class CardFactory:
         :return: 卡牌列表
         """
         import random
+        from config import PokerConfig
 
         total_cards = grid_size * grid_size
         total_pairs = total_cards // 2
 
-        # 生成配对值
-        values = list(range(1, total_pairs + 1)) * 2
+        # 生成扑克牌卡面作为配对值
+        faces = PokerConfig.sample_faces(total_pairs)
+        values = faces * 2
         random.shuffle(values)
 
         # 创建卡牌

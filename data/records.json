@@ -68,5 +68,41 @@
       "undo": 0
     },
     "timestamp": 1763643990
+  },
+  {
+    "mode": "ultimate",
+    "grid_size": 6,
+    "username": "admin",
+    "completed": false,
+    "time_used": 120,
+    "moves": 0,
+    "mistakes": 0,
+    "score": 0,
+    "reward": 0,
+    "items_used": {
+      "hint": 0,
+      "time_extend": 0,
+      "shuffle_prevent": 0,
+      "undo": 0
+    },
+    "timestamp": 1763652371
+  },
+  {
+    "mode": "normal",
+    "grid_size": 4,
+    "username": "admin",
+    "completed": true,
+    "time_used": 34,
+    "moves": 27,
+    "mistakes": 19,
+    "score": 63,
+    "reward": 205,
+    "items_used": {
+      "hint": 0,
+      "time_extend": 0,
+      "shuffle_prevent": 0,
+      "undo": 0
+    },
+    "timestamp": 1763664763
   }
 ]

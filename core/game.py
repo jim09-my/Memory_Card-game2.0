@@ -50,6 +50,7 @@ class Game:
         self.moves = 0
         self.score = 0
         self.mistakes = 0
+        self.resolving_pair = False
 
         # 计时器
         self.timer = Timer(time_limit=self.time_limit)
@@ -125,8 +126,8 @@ class Game:
             print("该卡牌无法翻转")
             return False
 
-        # 已经有两张翻开的卡牌
-        if len(self.flipped_cards) >= 2:
+        # 已经有两张翻开的卡牌或正在处理上一对
+        if self.resolving_pair or len(self.flipped_cards) >= 2:
             print("已有两张卡牌翻开，请先处理")
             return False
 
@@ -136,9 +137,10 @@ class Game:
 
         print(f"翻开卡牌 {card_index}: 值={card.value}")
 
-        # 如果翻开了两张卡牌，检查是否匹配
+        # 如果翻开了两张卡牌，检查是否匹配并标记等待决议
         if len(self.flipped_cards) == 2:
             self._check_match()
+            self.resolving_pair = True
 
         return True
 
@@ -502,6 +504,20 @@ class Game:
     def clear_last_pair(self):
         self.last_pair = None
         self.last_match = None
+
+    def resolve_current_pair(self):
+        pair, matched = self.get_last_pair()
+        if pair is None:
+            self.resolving_pair = False
+            return False
+        if not matched:
+            self.flip_back_cards(pair)
+        self.clear_last_pair()
+        self.clear_flipped_cards()
+        self.resolving_pair = False
+        if self.matched_pairs == self.get_total_pairs():
+            self.complete_game()
+        return True
 
     def get_total_pairs(self):
         """获取总对数"""

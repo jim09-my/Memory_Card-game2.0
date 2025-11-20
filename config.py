@@ -92,6 +92,26 @@ class UIConfig:
         'button': ('Helvetica', 12, 'bold')
     }
 
+# ============== 扑克牌配置 ==============
+class PokerConfig:
+    SUITS = ['♠', '♥', '♦', '♣']
+    RANKS = ['A'] + [str(i) for i in range(2, 11)]
+
+    @classmethod
+    def build_deck(cls):
+        return [(r, s) for s in cls.SUITS for r in cls.RANKS]
+
+    @classmethod
+    def sample_faces(cls, count):
+        import random
+        deck = cls.build_deck()
+        random.shuffle(deck)
+        return deck[:count]
+
+    @staticmethod
+    def suit_color(suit:str):
+        return UIConfig.COLORS['text_red'] if suit in ('♥','♦') else UIConfig.COLORS['text_black']
+
 # ============== 数据文件配置 (保持原样) ==============
 class DataConfig:
     PLAYERS_FILE = os.path.join(DATA_DIR, 'players.json')

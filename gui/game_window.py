@@ -9,7 +9,7 @@ import random
 from core.game import Game
 from config import GameConfig, UIConfig, PointsConfig, ItemConfig
 from managers.data_manager import save_player
-from gui.widgets import RoundButton
+from gui.widgets import PlayingCard
 from tkinter import ttk
 
 class GameWindow:
@@ -399,8 +399,22 @@ class GameWindow:
         mode_text = "普通模式 (4x4)" if mode == 'normal' else "终极挑战 (6x6)"
         self.mode_label.config(text=f"模式: {mode_text}")
 
+        # 根据模式调整窗口尺寸并居中（终极模式更大以容纳 6x6 卡片）
+        try:
+            if mode == 'normal':
+                self.window.geometry("1000x800")
+            else:
+                self.window.geometry("1280x960")
+            self._center_window()
+        except Exception:
+            pass
+
         # 创建卡牌网格
         self._create_card_grid()
+        try:
+            self.window.after(50, self._recenter_grid)
+        except Exception:
+            pass
 
         # 启用控制按钮
         self.start_btn.config(text="🔄 重新开始")
@@ -422,9 +436,9 @@ class GameWindow:
 
         grid_size = self.game.grid_size
 
-        # 使用固定卡牌尺寸与间距以保证视觉一致
-        card_size = 80 if grid_size <= 4 else 64
-        padding = 10
+        # 自适应画布尺寸，确保网格居中且全部可见
+        padding = 14 if grid_size <= 4 else 6
+        ratio = 1.42
 
         # 创建带纹理的背景 Canvas
         bg_canvas = tk.Canvas(self.game_frame, bg=UIConfig.COLORS.get('primary', '#4ECDC4'), highlightthickness=0)
@@ -437,27 +451,47 @@ class GameWindow:
         except Exception:
             pass
 
-        # 计算起始偏移，使网格居中
-        total_w = grid_size * card_size + (grid_size + 1) * padding
-        total_h = grid_size * card_size + (grid_size + 1) * padding
-        # place grid starting at padding (left/top)
+        bg_canvas.update_idletasks()
+        # 计算卡片尺寸（根据画布自适应）与居中偏移
+        canvas_w = bg_canvas.winfo_width()
+        canvas_h = bg_canvas.winfo_height()
+        max_w_per_card = (canvas_w - (grid_size + 1) * padding) / grid_size
+        max_h_per_card = (canvas_h - (grid_size + 1) * padding) / grid_size
+        card_w = int(min(max_w_per_card, max_h_per_card / ratio))
+        if card_w < 58:
+            card_w = 58
+        card_h = int(card_w * ratio)
+
+        total_w = grid_size * card_w + (grid_size + 1) * padding
+        total_h = grid_size * card_h + (grid_size + 1) * padding
+        start_x = max(0, (canvas_w - total_w) // 2)
+        start_y = max(0, (canvas_h - total_h) // 2)
+
         for row in range(grid_size):
             for col in range(grid_size):
                 card_index = row * grid_size + col
-                x = padding + col * (card_size + padding)
-                y = padding + row * (card_size + padding)
+                x = start_x + padding + col * (card_w + padding)
+                y = start_y + padding + row * (card_h + padding)
 
-                # create RoundButton
-                rb = RoundButton(bg_canvas, width=card_size, height=card_size, corner_radius=8,
-                                 bg='#FFE66D', fg='#333333', text='?', font=('Arial', int(card_size*0.28), 'bold'),
-                                 command=lambda idx=card_index: self._on_card_click(idx))
-
-                # initial back: use card back color
-                rb.config(bg=UIConfig.COLORS.get('card_back', '#3498DB'), fg='white', text='?')
+                pc = PlayingCard(bg_canvas, width=card_w, height=card_h, corner_radius=14,
+                                  command=lambda idx=card_index: self._on_card_click(idx))
+                try:
+                    pc._render_back()
+                except Exception:
+                    pass
 
                 # place on canvas
-                bg_canvas.create_window(x, y, window=rb, anchor=tk.NW)
-                self.card_buttons.append(rb)
+                bg_canvas.create_window(x, y, window=pc, anchor=tk.NW)
+                self.card_buttons.append(pc)
+
+        self._grid_canvas = bg_canvas
+
+    def _recenter_grid(self):
+        try:
+            if getattr(self, '_grid_canvas', None):
+                self._create_card_grid()
+        except Exception:
+            pass
 
     def _on_card_click(self, card_index):
         """
@@ -466,13 +500,6 @@ class GameWindow:
         """
         if not self.game or self.game.is_paused:
             return
-
-        if self.animating and self.pending_resolution_task:
-            self.window.after_cancel(self.pending_resolution_task)
-            self.pending_resolution_task = None
-            self.pending_mismatch = False
-            self.animating = False
-            self._handle_match_result()
 
         if self.animating:
             return
@@ -487,8 +514,7 @@ class GameWindow:
 
             if len(self.game.flipped_cards) == 2:
                 self.animating = True
-                self.pending_resolution_task = self.window.after(1000, self._handle_match_result)
-                self.pending_mismatch = True
+                self.pending_resolution_task = self.window.after(600, self._handle_match_result)
 
     def _handle_match_result(self):
         """处理配对结果"""
@@ -502,14 +528,10 @@ class GameWindow:
         if pair:
             idx1, idx2 = pair
             if matched:
-                # 同步隐藏两张已配对卡牌，确保视觉同时消失
                 self._hide_matched_cards([idx1, idx2])
-            else:
-                self.game.flip_back_cards(pair)
-                self._update_card_display(idx1)
-                self._update_card_display(idx2)
-        self.game.clear_last_pair()
-        self.game.clear_flipped_cards()
+            self.game.resolve_current_pair()
+            self._update_card_display(idx1)
+            self._update_card_display(idx2)
 
         self.animating = False
         self.pending_mismatch = False
@@ -537,10 +559,10 @@ class GameWindow:
         except Exception:
             pass
 
-        # 如果该卡牌已配对，设置占位样式并返回
+        # 如果该卡牌已配对，锁定为正面并禁用交互
         try:
             if card.is_matched:
-                self._set_matched_placeholder(card_index)
+                self._lock_matched_card(card_index)
                 return
         except Exception:
             pass
@@ -548,46 +570,47 @@ class GameWindow:
         # 其他状态处理继续（已在上方处理匹配状态）
 
         if card.is_flipped:
-            btn.config(
-                text=str(card.value),
-                bg='white',
-                fg='#34495E',
-                relief=tk.SUNKEN
-            )
+            try:
+                rank, suit = card.value if isinstance(card.value, (tuple, list)) else (str(card.value), '')
+                if hasattr(btn, 'show_front'):
+                    btn.show_front(rank, suit)
+                else:
+                    btn.config(text=str(card.value))
+            except Exception:
+                btn.config(text=str(card.value))
             return
 
         if card.is_revealed:
-            btn.config(
-                text="💡",
-                bg='#F0AD4E',
-                fg='white',
-                relief=tk.RAISED
-            )
+            try:
+                rank, suit = card.value if isinstance(card.value, (tuple, list)) else (str(card.value), '')
+                if hasattr(btn, 'show_front'):
+                    btn.show_front(rank, suit)
+                else:
+                    btn.config(text=str(card.value))
+            except Exception:
+                btn.config(text=str(card.value))
             return
 
-        btn.config(
-            text="?",
-            bg='#3498DB',
-            fg='white',
-            relief=tk.RAISED
-        )
+        try:
+            if hasattr(btn, 'show_back'):
+                btn.show_back()
+            else:
+                btn.config(text='?')
+        except Exception:
+            btn.config(text='?')
 
     def _hide_matched_card(self, card_index):
-        """让已配对的按钮视觉上消失"""
+        """兼容旧逻辑：保留为锁定正面"""
         if card_index >= len(self.card_buttons):
             return
 
         btn = self.card_buttons[card_index]
-        # 只清空显示并禁用交互，但保留在 grid 中作为占位，防止布局重排
         try:
-            # 将已配对卡牌保持为翻开状态，但显示问号并置白底，以便与未翻牌卡形成对比
-            try:
-                btn.config(text='?', image='', bg='white', fg='#34495E', disabledforeground='#34495E', activebackground='white', relief=tk.RAISED, state=tk.DISABLED)
-            except Exception:
-                try:
-                    btn.config(bg='white', state=tk.DISABLED)
-                except Exception:
-                    pass
+            card = self.game.get_card_by_index(card_index)
+            rank, suit = card.value if isinstance(card.value, (tuple, list)) else (str(card.value), '')
+            if hasattr(btn, 'show_front'):
+                btn.show_front(rank, suit)
+            btn.config(state=tk.DISABLED)
             try:
                 btn._matched_placeholder = True
             except Exception:
@@ -600,19 +623,19 @@ class GameWindow:
             pass
 
     def _hide_matched_cards(self, indices):
-        """一次性隐藏多张已配对卡牌并刷新界面"""
+        """一次性锁定多张已配对卡牌为正面并刷新界面"""
         try:
             for card_index in indices:
                 if 0 <= card_index < len(self.card_buttons):
                     btn = self.card_buttons[card_index]
-                    # 将已配对卡牌保持为翻开状态，但显示问号并置白底，以便与未翻牌卡形成对比
                     try:
-                        btn.config(text='?', image='', bg='white', fg='#34495E', disabledforeground='#34495E', activebackground='white', relief=tk.RAISED, state=tk.DISABLED)
+                        card = self.game.get_card_by_index(card_index)
+                        rank, suit = card.value if isinstance(card.value, (tuple, list)) else (str(card.value), '')
+                        if hasattr(btn, 'show_front'):
+                            btn.show_front(rank, suit)
+                        btn.config(state=tk.DISABLED)
                     except Exception:
-                        try:
-                            btn.config(bg='white', state=tk.DISABLED)
-                        except Exception:
-                            pass
+                        pass
                     try:
                         btn._matched_placeholder = True
                     except Exception:
@@ -625,43 +648,16 @@ class GameWindow:
         except Exception:
             pass
 
-    def _set_matched_placeholder(self, card_index):
-        """把单张已配对卡牌设置为占位问号样式并禁用交互"""
+    def _lock_matched_card(self, card_index):
+        """把单张已配对卡牌锁定为正面并禁用交互"""
         try:
             if 0 <= card_index < len(self.card_buttons):
                 widget = self.card_buttons[card_index]
-                # If it's a Button, configure to white background and disable it
-                if isinstance(widget, tk.Button):
-                    try:
-                        widget.config(text='', bg='white', fg='#34495E', relief=tk.FLAT, state=tk.DISABLED, disabledforeground='#34495E')
-                    except Exception:
-                        try:
-                            widget.config(bg='white', state=tk.DISABLED)
-                        except Exception:
-                            pass
-                # If it's a Canvas, fill background white and remove items
-                elif isinstance(widget, tk.Canvas):
-                    try:
-                        widget.config(bg='white')
-                        widget.delete('all')
-                        w = widget.winfo_width() or widget['width'] if 'width' in widget.keys() else 60
-                        h = widget.winfo_height() or widget['height'] if 'height' in widget.keys() else 40
-                        try:
-                            widget.create_rectangle(0, 0, w, h, fill='white', outline='white')
-                        except Exception:
-                            pass
-                    except Exception:
-                        pass
-                # If it's a Label or other, set bg to white
-                else:
-                    try:
-                        widget.config(bg='white', fg='#34495E', text='')
-                    except Exception:
-                        try:
-                            widget.config(bg='white')
-                        except Exception:
-                            pass
-
+                card = self.game.get_card_by_index(card_index)
+                rank, suit = card.value if isinstance(card.value, (tuple, list)) else (str(card.value), '')
+                if hasattr(widget, 'show_front'):
+                    widget.show_front(rank, suit)
+                widget.config(state=tk.DISABLED)
                 try:
                     widget._matched_placeholder = True
                 except Exception:
