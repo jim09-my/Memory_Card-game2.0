@@ -1,0 +1,10 @@
+{
+  "definitions": [
+    {
+      "id": "first_game",
+      "name": "初次尝试",
+      "description": "完成第一场游戏",
+      "category": "入门",
+      "reward": 100,
+      "icon": "🎮",
+      "condition": 

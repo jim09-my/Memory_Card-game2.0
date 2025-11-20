@@ -7,7 +7,8 @@ import tkinter as tk
 from tkinter import messagebox
 import random
 from core.game import Game
-from config import GameConfig, UIConfig, PointsConfig
+from config import GameConfig, UIConfig, PointsConfig, ItemConfig
+from managers.data_manager import save_player
 
 class GameWindow:
     """游戏窗口类"""
@@ -24,11 +25,23 @@ class GameWindow:
         self.on_close = on_close
         self.game = None
 
+        # 注册玩家变更监听（用于道具/积分等即时刷新）
+        if hasattr(self.player, 'add_change_listener'):
+            try:
+                self.player.add_change_listener(self._on_player_change)
+            except Exception:
+                pass
+
         # 创建窗口
         self.window = tk.Toplevel(parent)
         self.window.title("记忆翻牌游戏")
         # 使用 1000x800 的窗口大小，适配大部分屏幕
         self.window.geometry("1000x800")
+        # 窗口居中
+        try:
+            self._center_window()
+        except Exception:
+            pass
         self.window.resizable(False, False)
 
         # 卡牌按钮
@@ -42,6 +55,9 @@ class GameWindow:
 
         # 更新任务ID
         self.update_task = None
+
+        # 结束处理标志，防止重复弹窗或重复销毁
+        self._end_handled = False
 
         # 创建界面
         self._create_widgets()
@@ -69,6 +85,23 @@ class GameWindow:
 
         # 道具栏
         self._create_item_panel(self.bottom_panel)
+
+    def _center_window(self):
+        """把当前窗口居中到屏幕中央"""
+        try:
+            self.window.update_idletasks()
+            width = self.window.winfo_width()
+            height = self.window.winfo_height()
+            # 如果尚未得到尺寸，使用默认值
+            if not width or width <= 1:
+                width = 1000
+            if not height or height <= 1:
+                height = 800
+            x = (self.window.winfo_screenwidth() // 2) - (width // 2)
+            y = (self.window.winfo_screenheight() // 2) - (height // 2)
+            self.window.geometry(f"{width}x{height}+{x}+{y}")
+        except Exception:
+            pass
 
     def _create_top_bar(self):
         """创建顶部信息栏"""
@@ -240,7 +273,8 @@ class GameWindow:
         items_container = tk.Frame(item_frame, bg='#2C3E50')
         items_container.pack(fill=tk.X, padx=10)
 
-        # 道具按钮配置
+        # 动态创建道具按钮
+        self.item_buttons = {}
         item_btn_config = {
             'font': ('Arial', 10),
             'width': 15,
@@ -248,35 +282,16 @@ class GameWindow:
             'fg': 'white'
         }
 
-        # 提示道具
-        self.hint_btn = tk.Button(
-            items_container,
-            text="💡 提示 (0)",
-            command=self._use_hint,
-            state=tk.DISABLED,
-            **item_btn_config
-        )
-        self.hint_btn.pack(side=tk.LEFT, padx=5)
-
-        # 延时道具
-        self.time_extend_btn = tk.Button(
-            items_container,
-            text="⏰ 延时 (0)",
-            command=self._use_time_extend,
-            state=tk.DISABLED,
-            **item_btn_config
-        )
-        self.time_extend_btn.pack(side=tk.LEFT, padx=5)
-
-        # 撤销道具
-        self.undo_btn = tk.Button(
-            items_container,
-            text="↩️ 撤销 (0)",
-            command=self._use_undo,
-            state=tk.DISABLED,
-            **item_btn_config
-        )
-        self.undo_btn.pack(side=tk.LEFT, padx=5)
+        for item_id, item in ItemConfig.ITEMS.items():
+            btn = tk.Button(
+                items_container,
+                text=f"{item.get('icon','')} {item.get('name','')} (0)",
+                command=lambda i=item_id: self._use_item(i),
+                state=tk.DISABLED,
+                **item_btn_config
+            )
+            btn.pack(side=tk.LEFT, padx=5)
+            self.item_buttons[item_id] = btn
 
         # 更新道具数量显示
         self._update_item_display()
@@ -433,6 +448,11 @@ class GameWindow:
                     command=lambda idx=card_index: self._on_card_click(idx)
                 )
                 btn.grid(row=row, column=col, padx=padding//2, pady=padding//2, sticky='nsew')
+                # 标记为未隐藏（用于后续隐藏保护）
+                try:
+                    btn._hidden = False
+                except Exception:
+                    pass
                 row_buttons.append(btn)
 
             self.card_buttons.extend(row_buttons)
@@ -485,8 +505,8 @@ class GameWindow:
         if pair:
             idx1, idx2 = pair
             if matched:
-                self._hide_matched_card(idx1)
-                self._hide_matched_card(idx2)
+                # 同步隐藏两张已配对卡牌，确保视觉同时消失
+                self._hide_matched_cards([idx1, idx2])
             else:
                 self.game.flip_back_cards(pair)
                 self._update_card_display(idx1)
@@ -513,10 +533,22 @@ class GameWindow:
 
         card = self.game.get_card_by_index(card_index)
         btn = self.card_buttons[card_index]
+        # 如果该位置已经被标记为匹配占位，直接返回，防止后续状态覆盖样式
+        try:
+            if getattr(btn, '_matched_placeholder', False):
+                return
+        except Exception:
+            pass
 
-        if card.is_matched:
-            self._hide_matched_card(card_index)
-            return
+        # 如果该卡牌已配对，设置占位样式并返回
+        try:
+            if card.is_matched:
+                self._set_matched_placeholder(card_index)
+                return
+        except Exception:
+            pass
+
+        # 其他状态处理继续（已在上方处理匹配状态）
 
         if card.is_flipped:
             btn.config(
@@ -549,12 +581,115 @@ class GameWindow:
             return
 
         btn = self.card_buttons[card_index]
-        btn.config(text="", bg=self.game_frame['bg'], relief=tk.FLAT, state=tk.DISABLED)
-        btn.grid_remove()
+        # 只清空显示并禁用交互，但保留在 grid 中作为占位，防止布局重排
+        try:
+            # 将已配对卡牌保持为翻开状态，但显示问号并置白底，以便与未翻牌卡形成对比
+            try:
+                btn.config(text='?', image='', bg='white', fg='#34495E', disabledforeground='#34495E', activebackground='white', relief=tk.RAISED, state=tk.DISABLED)
+            except Exception:
+                try:
+                    btn.config(bg='white', state=tk.DISABLED)
+                except Exception:
+                    pass
+            try:
+                btn._matched_placeholder = True
+            except Exception:
+                pass
+            try:
+                self.window.update_idletasks()
+            except Exception:
+                pass
+        except Exception:
+            pass
+
+    def _hide_matched_cards(self, indices):
+        """一次性隐藏多张已配对卡牌并刷新界面"""
+        try:
+            for card_index in indices:
+                if 0 <= card_index < len(self.card_buttons):
+                    btn = self.card_buttons[card_index]
+                    # 将已配对卡牌保持为翻开状态，但显示问号并置白底，以便与未翻牌卡形成对比
+                    try:
+                        btn.config(text='?', image='', bg='white', fg='#34495E', disabledforeground='#34495E', activebackground='white', relief=tk.RAISED, state=tk.DISABLED)
+                    except Exception:
+                        try:
+                            btn.config(bg='white', state=tk.DISABLED)
+                        except Exception:
+                            pass
+                    try:
+                        btn._matched_placeholder = True
+                    except Exception:
+                        pass
+            # 立即刷新 UI
+            try:
+                self.window.update_idletasks()
+            except Exception:
+                pass
+        except Exception:
+            pass
+
+    def _set_matched_placeholder(self, card_index):
+        """把单张已配对卡牌设置为占位问号样式并禁用交互"""
+        try:
+            if 0 <= card_index < len(self.card_buttons):
+                widget = self.card_buttons[card_index]
+                # If it's a Button, configure to white background and disable it
+                if isinstance(widget, tk.Button):
+                    try:
+                        widget.config(text='', bg='white', fg='#34495E', relief=tk.FLAT, state=tk.DISABLED, disabledforeground='#34495E')
+                    except Exception:
+                        try:
+                            widget.config(bg='white', state=tk.DISABLED)
+                        except Exception:
+                            pass
+                # If it's a Canvas, fill background white and remove items
+                elif isinstance(widget, tk.Canvas):
+                    try:
+                        widget.config(bg='white')
+                        widget.delete('all')
+                        w = widget.winfo_width() or widget['width'] if 'width' in widget.keys() else 60
+                        h = widget.winfo_height() or widget['height'] if 'height' in widget.keys() else 40
+                        try:
+                            widget.create_rectangle(0, 0, w, h, fill='white', outline='white')
+                        except Exception:
+                            pass
+                    except Exception:
+                        pass
+                # If it's a Label or other, set bg to white
+                else:
+                    try:
+                        widget.config(bg='white', fg='#34495E', text='')
+                    except Exception:
+                        try:
+                            widget.config(bg='white')
+                        except Exception:
+                            pass
+
+                try:
+                    widget._matched_placeholder = True
+                except Exception:
+                    pass
+        except Exception:
+            pass
 
     def _update_game_state(self):
         """更新游戏状态（定时调用）"""
         if not self.game or not self.game.is_started:
+            return
+
+        # 如果游戏在外部被标记为完成或失败，优先处理结束逻辑
+        if self.game.is_completed:
+            # 在主线程中调度完成回调，保证 UI 更新
+            try:
+                self._on_game_complete()
+            except Exception:
+                pass
+            return
+        if self.game.is_failed:
+            try:
+                self._on_game_failed()
+            except Exception:
+                pass
             return
 
         # 更新时间
@@ -614,6 +749,12 @@ class GameWindow:
             # 更新道具显示
             self._update_item_display()
 
+            # 持久化玩家道具变化
+            try:
+                save_player(self.player)
+            except Exception:
+                pass
+
     def _hide_hint(self):
         """隐藏提示"""
         if self.game:
@@ -631,6 +772,10 @@ class GameWindow:
         if self.game.extend_time(30):
             messagebox.showinfo("成功", "⏰ 时间延长30秒！")
             self._update_item_display()
+            try:
+                save_player(self.player)
+            except Exception:
+                pass
         else:
             messagebox.showinfo("提示", "当前模式无时间限制")
 
@@ -647,32 +792,72 @@ class GameWindow:
 
             messagebox.showinfo("成功", "↩️ 已撤销上一步操作！")
             self._update_item_display()
+            try:
+                save_player(self.player)
+            except Exception:
+                pass
         else:
             messagebox.showinfo("提示", "没有可撤销的操作")
 
     def _update_item_display(self):
-        """更新道具显示"""
-        hint_count = self.player.get_item_count('hint')
-        time_count = self.player.get_item_count('time_extend')
-        undo_count = self.player.get_item_count('undo')
+        """更新道具显示（动态根据 ItemConfig）"""
+        # 如果没有动态按钮（兼容旧逻辑），直接返回
+        if not hasattr(self, 'item_buttons') or not self.item_buttons:
+            return
 
-        self.hint_btn.config(
-            text=f"💡 提示 ({hint_count})",
-            state=tk.NORMAL if hint_count > 0 and self.game and self.game.is_started else tk.DISABLED
-        )
+        for item_id, btn in self.item_buttons.items():
+            item = ItemConfig.ITEMS.get(item_id, {})
+            icon = item.get('icon', '')
+            name = item.get('name', item_id)
+            count = self.player.get_item_count(item_id)
 
-        self.time_extend_btn.config(
-            text=f"⏰ 延时 ({time_count})",
-            state=tk.NORMAL if time_count > 0 and self.game and self.game.is_started else tk.DISABLED
-        )
+            btn.config(text=f"{icon} {name} ({count})")
 
-        self.undo_btn.config(
-            text=f"↩️ 撤销 ({undo_count})",
-            state=tk.NORMAL if undo_count > 0 and self.game and self.game.is_started else tk.DISABLED
-        )
+            # 只有在游戏进行中且拥有数量时才可用
+            usable = (count > 0 and self.game and getattr(self.game, 'is_started', False))
+            btn.config(state=tk.NORMAL if usable else tk.DISABLED)
+
+        return
+
+    def _use_item(self, item_id):
+        """通用道具使用路由：根据 item_id 调用对应方法"""
+        if item_id == 'hint':
+            self._use_hint()
+            return
+
+        if item_id == 'time_extend':
+            self._use_time_extend()
+            return
+
+        if item_id == 'undo':
+            self._use_undo()
+            return
+
+        # 其他道具（如果尚未实现）给出提示
+        messagebox.showinfo("提示", f"当前道具暂未实现：{item_id}")
+
+    def _on_player_change(self):
+        """玩家数据变化回调（由 Player 调用），在主线程调度 UI 刷新。"""
+        try:
+            if hasattr(self, 'window') and self.window:
+                self.window.after(0, self._update_item_display)
+        except Exception:
+            pass
 
     def _on_game_complete(self):
         """游戏完成"""
+        # 防止重复处理（由不同路径重复触发）
+        if getattr(self, '_end_handled', False):
+            return
+        self._end_handled = True
+
+        # 停止定时刷新任务，防止再次触发结束逻辑
+        if self.update_task:
+            try:
+                self.window.after_cancel(self.update_task)
+            except Exception:
+                pass
+
         self.pause_btn.config(state=tk.DISABLED)
 
         # 显示结果
@@ -692,8 +877,26 @@ class GameWindow:
         # 更新积分显示
         self.points_label.config(text=f"💰 积分: {self.player.points}")
 
+        # 结束游戏后关闭并销毁本窗口
+        try:
+            self._on_closing()
+        except Exception:
+            pass
+
     def _on_game_failed(self):
         """游戏失败"""
+        # 防止重复处理（由不同路径重复触发）
+        if getattr(self, '_end_handled', False):
+            return
+        self._end_handled = True
+
+        # 停止定时刷新任务，防止再次触发结束逻辑
+        if self.update_task:
+            try:
+                self.window.after_cancel(self.update_task)
+            except Exception:
+                pass
+
         self.pause_btn.config(state=tk.DISABLED)
 
         messagebox.showwarning(
@@ -701,11 +904,22 @@ class GameWindow:
             f"⏰ 时间到！\n\n已完成: {self.game.matched_pairs}/{self.game.get_total_pairs()}"
         )
 
+        # 失败后也关闭游戏窗口
+        try:
+            self._on_closing()
+        except Exception:
+            pass
+
     def _on_closing(self):
         """窗口关闭"""
         if self.update_task:
             self.window.after_cancel(self.update_task)
-
+        # 移除玩家监听器
+        if hasattr(self.player, 'remove_change_listener'):
+            try:
+                self.player.remove_change_listener(self._on_player_change)
+            except Exception:
+                pass
         self.window.destroy()
 
         if self.on_close:

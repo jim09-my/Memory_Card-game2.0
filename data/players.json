@@ -2,24 +2,62 @@
   "123": {
     "username": "123",
     "email": "123",
-    "points": 300,
-    "level": 1,
+    "password": "",
+    "points": 750,
+    "level": 2,
     "experience": 0,
-    "total_points_earned": 0,
-    "total_games": 0,
-    "completed_games": 0,
-    "total_moves": 0,
-    "total_time": 0,
-    "best_time_normal": null,
+    "total_points_earned": 1150,
+    "total_games": 2,
+    "completed_games": 2,
+    "total_moves": 46,
+    "total_time": 37,
+    "best_time_normal": 16,
     "best_time_ultimate": null,
-    "items": {
-      "hint": 2
-    },
-    "achievements": [],
+    "items": {},
+    "achievements": [
+      "first_game",
+      "speed_king"
+    ],
     "created_at": 1763481646.6303117,
-    "last_login": 1763548377.121644,
-    "consecutive_days": 1,
-    "game_records": [],
+    "last_login": 1763632464.824583,
+    "consecutive_days": 2,
+    "game_records": [
+      {
+        "mode": "normal",
+        "grid_size": 4,
+        "completed": true,
+        "time_used": 16,
+        "moves": 20,
+        "mistakes": 12,
+        "score": 69,
+        "reward": 240,
+        "items_used": {
+          "hint": 0,
+          "time_extend": 0,
+          "shuffle_prevent": 0,
+          "undo": 0
+        },
+        "timestamp": 1763628304.1083596
+      },
+      {
+        "mode": "normal",
+        "grid_size": 4,
+        "username": "123",
+        "completed": true,
+        "time_used": 21,
+        "moves": 26,
+        "mistakes": 18,
+        "score": 62,
+        "reward": 210,
+        "items_used": {
+          "hint": 0,
+          "time_extend": 0,
+          "shuffle_prevent": 0,
+          "undo": 0
+        },
+        "timestamp": 1763631163.526287
+      }
+    ],
     "benefits": {
       "free_hint_redeemed": true
     }
@@ -28,7 +66,7 @@
     "username": "1234",
     "email": "",
     "password": "123456",
-    "points": 2545,
+    "points": 1395,
     "level": 3,
     "experience": 0,
     "total_points_earned": 2045,
@@ -39,12 +77,13 @@
     "best_time_normal": 0,
     "best_time_ultimate": 0,
     "items": {
-      "hint": 1
+      "hint": 1,
+      "shuffle_prevent": 1
     },
     "achievements": [],
     "created_at": 1763548912.416925,
-    "last_login": 1763556105.2976146,
-    "consecutive_days": 1,
+    "last_login": 1763627588.0596843,
+    "consecutive_days": 2,
     "game_records": [
       {
         "mode": "normal",

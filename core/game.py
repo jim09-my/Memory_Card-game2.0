@@ -9,6 +9,8 @@ from core.card import Card, CardFactory
 from core.timer import Timer
 from data_structures.stack import Stack
 from data_structures.queue import Queue
+from config import AchievementConfig
+from managers.data_manager import append_record, add_unlocked_achievement, save_player
 
 class Game:
     """记忆翻牌游戏核心类"""
@@ -369,6 +371,7 @@ class Game:
             record = {
                 'mode': self.mode,
                 'grid_size': self.grid_size,
+                'username': self.player.username if self.player else None,
                 'completed': True,
                 'time_used': time_used,
                 'moves': self.moves,
@@ -377,8 +380,44 @@ class Game:
                 'reward': reward,
                 'items_used': self.items_used.copy()
             }
+            # 全局追加记录（立即写盘，保证可见性）
+            try:
+                append_record(record)
+            except Exception:
+                pass
+
+            # 更新玩家内存状态并通知监听器
             self.player.add_game_record(record)
             self.player.add_points(reward)
+            # 检查并解锁成就（基于配置中的条件）
+            try:
+                for ach in getattr(AchievementConfig, 'ACHIEVEMENTS', []):
+                    aid = ach.get('id')
+                    if aid and ach.get('condition') and ach.get('condition')(self.player):
+                        if not self.player.has_achievement(aid):
+                            self.player.unlock_achievement(aid)
+                            # 奖励积分（如果配置中定义）
+                            reward_amount = ach.get('reward', 0)
+                            if reward_amount:
+                                self.player.add_points(reward_amount)
+                            # 记录到 achievements.json unlocked 映射
+                            try:
+                                add_unlocked_achievement(self.player.username, aid)
+                            except Exception:
+                                pass
+            except Exception:
+                pass
+            # 持久化玩家（写入 players.json，包括运行态）
+            try:
+                save_player(self.player)
+            except Exception:
+                pass
+            # 强制通知监听器，确保 UI 能尽快刷新（增加刷新可靠性）
+            try:
+                if hasattr(self.player, '_notify_listeners'):
+                    self.player._notify_listeners()
+            except Exception:
+                pass
 
     def fail_game(self):
         """游戏失败（超时）"""
@@ -400,6 +439,7 @@ class Game:
             record = {
                 'mode': self.mode,
                 'grid_size': self.grid_size,
+                'username': self.player.username if self.player else None,
                 'completed': False,
                 'time_used': int(self.timer.get_elapsed_time()),
                 'moves': self.moves,
@@ -408,7 +448,24 @@ class Game:
                 'reward': 0,
                 'items_used': self.items_used.copy()
             }
+            # 全局追加记录并立即写盘
+            try:
+                append_record(record)
+            except Exception:
+                pass
+
             self.player.add_game_record(record)
+
+            # 持久化玩家（写入 players.json，包括运行态）
+            try:
+                save_player(self.player)
+            except Exception:
+                pass
+            try:
+                if hasattr(self.player, '_notify_listeners'):
+                    self.player._notify_listeners()
+            except Exception:
+                pass
 
     def _calculate_reward(self, time_used):
         """

@@ -47,6 +47,8 @@ class Timer:
     def stop(self):
         """停止计时"""
         if self.is_running:
+            # 记录停止时间，供 get_elapsed_time 计算
+            self.pause_time = time.time()
             self.is_running = False
             self.is_paused = False
             print("计时器已停止")

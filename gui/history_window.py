@@ -17,9 +17,19 @@ class HistoryWindow:
         self.window = tk.Toplevel(master)
         self.window.title("记忆翻牌游戏 - 历史记录")
         self.window.geometry("780x600")
-        self.window.resizable(False, False)
+        self.window.resizable(True, True)
         self.window.transient(master)
         self.window.grab_set()
+        # 居中窗口
+        try:
+            self.window.update_idletasks()
+            w = self.window.winfo_width() or 780
+            h = self.window.winfo_height() or 600
+            x = (self.window.winfo_screenwidth() // 2) - (w // 2)
+            y = (self.window.winfo_screenheight() // 2) - (h // 2)
+            self.window.geometry(f"{w}x{h}+{x}+{y}")
+        except Exception:
+            pass
 
         self.refresh_symbols = ['⟳', '⟲', '⟰', '⟱']
         self.refresh_index = 0
@@ -28,6 +38,29 @@ class HistoryWindow:
         self._create_widgets()
         self._populate_summary()
         self._populate_records()
+        # 监听玩家变化，实时刷新记录与统计
+        if hasattr(self.player, 'add_change_listener'):
+            try:
+                self.player.add_change_listener(self._on_player_change)
+            except Exception:
+                pass
+
+        # 窗口关闭时清理监听器
+        self.window.protocol("WM_DELETE_WINDOW", self._on_close)
+
+    def _on_player_change(self):
+        try:
+            self.window.after(0, lambda: (self._populate_summary(), self._populate_records()))
+        except Exception:
+            pass
+
+    def _on_close(self):
+        if hasattr(self.player, 'remove_change_listener'):
+            try:
+                self.player.remove_change_listener(self._on_player_change)
+            except Exception:
+                pass
+        self.window.destroy()
 
     # ------------------------------ UI ------------------------------
     def _create_widgets(self):

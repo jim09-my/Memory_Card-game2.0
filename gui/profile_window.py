@@ -14,15 +14,62 @@ class ProfileWindow:
     def __init__(self, master, player):
         self.master = master
         self.player = player
-
         self.window = tk.Toplevel(master)
         self.window.title("记忆翻牌游戏 - 个人资料")
         self.window.geometry("720x520")
-        self.window.resizable(False, False)
+        self.window.resizable(True, True)
         self.window.transient(master)
         self.window.grab_set()
 
+        # 居中窗口
+        try:
+            self.window.update_idletasks()
+            w = self.window.winfo_width() or 720
+            h = self.window.winfo_height() or 520
+            x = (self.window.winfo_screenwidth() // 2) - (w // 2)
+            y = (self.window.winfo_screenheight() // 2) - (h // 2)
+            self.window.geometry(f"{w}x{h}+{x}+{y}")
+        except Exception:
+            pass
+
         self._create_widgets()
+        # 监听玩家变化，实时刷新界面
+        if hasattr(self.player, 'add_change_listener'):
+            try:
+                self.player.add_change_listener(self._on_player_change)
+            except Exception:
+                pass
+
+        self.window.protocol("WM_DELETE_WINDOW", self._on_close)
+
+    def _on_player_change(self):
+        try:
+            self.window.after(0, self._refresh)
+        except Exception:
+            pass
+
+    def _refresh(self):
+        # 重新填充所有可变部分
+        for widget in self.window.winfo_children():
+            pass
+        # 重新创建 widgets content
+        # 简单做法：销毁并重建内容区域
+        try:
+            # 保留 header（first child），重建 content 区
+            # 为保证安全，直接调用 _create_widgets 的刷新路径
+            for child in self.window.winfo_children():
+                child.destroy()
+        except Exception:
+            pass
+        self._create_widgets()
+
+    def _on_close(self):
+        if hasattr(self.player, 'remove_change_listener'):
+            try:
+                self.player.remove_change_listener(self._on_player_change)
+            except Exception:
+                pass
+        self.window.destroy()
 
     def _create_widgets(self):
         header = tk.Frame(self.window, bg='#2C3E50', height=110, padx=20)

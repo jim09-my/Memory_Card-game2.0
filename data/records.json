@@ -1,0 +1,36 @@
+[
+  {
+    "mode": "normal",
+    "grid_size": 4,
+    "completed": true,
+    "time_used": 16,
+    "moves": 20,
+    "mistakes": 12,
+    "score": 69,
+    "reward": 240,
+    "items_used": {
+      "hint": 0,
+      "time_extend": 0,
+      "shuffle_prevent": 0,
+      "undo": 0
+    }
+  },
+  {
+    "mode": "normal",
+    "grid_size": 4,
+    "username": "123",
+    "completed": true,
+    "time_used": 21,
+    "moves": 26,
+    "mistakes": 18,
+    "score": 62,
+    "reward": 210,
+    "items_used": {
+      "hint": 0,
+      "time_extend": 0,
+      "shuffle_prevent": 0,
+      "undo": 0
+    },
+    "timestamp": 1763631163
+  }
+]

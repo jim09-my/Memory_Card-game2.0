@@ -53,6 +53,8 @@ class Player:
         # 游戏记录
         self.game_records = []
 
+        # 监听器（用于 UI 更新等）
+        self._listeners = []
     def add_points(self, amount):
         """
         增加积分
@@ -62,6 +64,11 @@ class Player:
         self.total_points_earned += amount
         self._update_level()
         print(f"{self.username} 获得 {amount} 积分，当前: {self.points}")
+        # 通知监听器（例如界面或持久化）
+        try:
+            self._notify_listeners()
+        except Exception:
+            pass
 
     def deduct_points(self, amount):
         """
@@ -72,6 +79,10 @@ class Player:
         if self.points >= amount:
             self.points -= amount
             print(f"{self.username} 消耗 {amount} 积分，剩余: {self.points}")
+            try:
+                self._notify_listeners()
+            except Exception:
+                pass
             return True
         else:
             print(f"{self.username} 积分不足！需要 {amount}，当前 {self.points}")
@@ -97,6 +108,11 @@ class Player:
         else:
             self.items[item_id] = quantity
         print(f"{self.username} 获得道具 {item_id} x{quantity}")
+        # 通知监听器（例如界面）更新
+        try:
+            self._notify_listeners()
+        except Exception:
+            pass
 
     def use_item(self, item_id, quantity=1):
         """
@@ -114,7 +130,31 @@ class Player:
             del self.items[item_id]
 
         print(f"{self.username} 使用道具 {item_id} x{quantity}")
+        # 通知监听器（例如界面）更新
+        try:
+            self._notify_listeners()
+        except Exception:
+            pass
         return True
+
+    # ----------------- 监听器接口 -----------------
+    def add_change_listener(self, callback):
+        """注册变更监听器，callback 不带参数。"""
+        if callback not in self._listeners:
+            self._listeners.append(callback)
+
+    def remove_change_listener(self, callback):
+        """移除已注册的监听器。"""
+        if callback in self._listeners:
+            self._listeners.remove(callback)
+
+    def _notify_listeners(self):
+        """通知所有监听器（安全调用）。"""
+        for cb in list(self._listeners):
+            try:
+                cb()
+            except Exception as e:
+                print(f"Listener error: {e}")
 
     def can_claim_free_hint(self):
         """检查新手免费提示是否可用（注册7天内且未领取）"""
@@ -143,6 +183,10 @@ class Player:
         if achievement_id not in self.achievements:
             self.achievements.append(achievement_id)
             print(f"🏆 {self.username} 解锁成就: {achievement_id}")
+            try:
+                self._notify_listeners()
+            except Exception:
+                pass
             return True
         return False
 
@@ -183,6 +227,11 @@ class Player:
         # 保持最近50条记录
         if len(self.game_records) > 50:
             self.game_records = self.game_records[-50:]
+        # 通知监听器并尝试持久化
+        try:
+            self._notify_listeners()
+        except Exception:
+            pass
 
     def get_win_rate(self):
         """获取胜率"""

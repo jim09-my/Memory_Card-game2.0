@@ -20,6 +20,12 @@ class MainWindow:
         :param player: 玩家对象
         """
         self.player = player
+        # 当玩家数据发生变化时自动保存（比如道具变化、积分变化）
+        if hasattr(self.player, 'add_change_listener'):
+            try:
+                self.player.add_change_listener(self._save_player)
+            except Exception:
+                pass
         self.window = tk.Tk()
         self.window.title("记忆翻牌游戏 - 主菜单")
         self.window.geometry("800x600")
@@ -255,6 +261,13 @@ class MainWindow:
     def _on_closing(self):
         """窗口关闭"""
         if messagebox.askokcancel("退出", "确定要退出游戏吗？"):
+            # 移除玩家监听器，防止程序退出后回调仍然触发
+            if hasattr(self.player, 'remove_change_listener'):
+                try:
+                    self.player.remove_change_listener(self._save_player)
+                except Exception:
+                    pass
+
             self._save_player()
             self.window.destroy()
 
