@@ -3,10 +3,11 @@
 """
 
 import tkinter as tk
-from tkinter import messagebox, ttk
+from tkinter import messagebox
+from PIL import Image, ImageTk
 import json
 import os
-from config import DataConfig
+from config import DataConfig, ASSETS_DIR
 from core.player import Player
 
 class LoginWindow:
@@ -20,13 +21,13 @@ class LoginWindow:
         self.on_login_success = on_login_success
         self.window = tk.Tk()
         self.window.title("记忆翻牌游戏 - 登录")
-        self.window.geometry("400x500")
+        self.window.geometry("1100x700")
         self.window.resizable(False, False)
 
-        # 居中显示
-        self._center_window()
+        self.bg_image = None
+        self.register_window = None
 
-        # 创建界面
+        # 创建界面（内部会再一次居中为最终大小）
         self._create_widgets()
 
         # 加载玩家数据库
@@ -43,105 +44,187 @@ class LoginWindow:
 
     def _create_widgets(self):
         """创建界面组件"""
-        # 标题
-        title_frame = tk.Frame(self.window, bg='#4A90E2', height=100)
-        title_frame.pack(fill=tk.X)
-        title_frame.pack_propagate(False)
+        self._load_background_image()
 
-        title_label = tk.Label(
-            title_frame,
-            text="🎮 记忆翻牌游戏",
-            font=('Arial', 24, 'bold'),
-            bg='#4A90E2',
-            fg='white'
+        bg_label = tk.Label(self.window, bd=0)
+        if self.bg_image:
+            bg_label.config(image=self.bg_image)
+            bg_label.image = self.bg_image
+        bg_label.place(relx=0, rely=0, relwidth=1, relheight=1)
+
+        shadow = tk.Frame(self.window, bg='#112039')
+        shadow.place(relx=0.5, rely=0.5, anchor='center', width=420, height=520)
+
+        card_frame = tk.Frame(self.window, bg='#f7fbff', bd=0, highlightthickness=0)
+        card_frame.place(relx=0.5, rely=0.5, anchor='center', width=420, height=520)
+        card_frame.pack_propagate(False)
+
+        self.login_card_frame = tk.Frame(card_frame, bg='#f7fbff')
+        self.login_card_frame.place(relx=0, rely=0, relwidth=1, relheight=1)
+
+        self.register_card_frame = tk.Frame(card_frame, bg='#f7fbff')
+        self.register_card_frame.place(relx=0, rely=0, relwidth=1, relheight=1)
+
+        self._create_login_card(self.login_card_frame)
+        self._create_register_card(self.register_card_frame)
+        self._show_login_card()
+        self._center_window()
+
+    def _load_background_image(self):
+        """加载背景图，尝试 assets/images 作为备选"""
+        candidates = [
+            os.path.join(ASSETS_DIR, 'images', 'background.png'),
+            os.path.join(ASSETS_DIR, 'background.png')
+        ]
+        for img_path in candidates:
+            try:
+                if os.path.exists(img_path):
+                    img = Image.open(img_path)
+                    img = img.resize((1100, 700), Image.LANCZOS)
+                    self.bg_image = ImageTk.PhotoImage(img)
+                    return
+            except Exception:
+                continue
+        self.bg_image = None
+
+    def _create_login_card(self, parent):
+        """创建登录卡片"""
+        self._build_auth_card(
+            parent=parent,
+            username_attr='login_username',
+            password_attr='login_password',
+            button_text='立即登录',
+            button_command=self._handle_login,
+            show_register_link=True,
+            show_remember=True,
+            bottom_note='记忆从SCAU开始，祝你配对顺利'
         )
-        title_label.pack(expand=True)
 
-        # 主内容区
-        content_frame = tk.Frame(self.window, padx=40, pady=30)
-        content_frame.pack(fill=tk.BOTH, expand=True)
+    def _create_register_card(self, parent):
+        self._build_auth_card(
+            parent=parent,
+            username_attr='register_username_entry',
+            password_attr='register_password_entry',
+            button_text='立即注册',
+            button_command=self._handle_register,
+            bottom_note='立即注册即可获得500积分新手礼包'
+        )
 
-        # 标签页
-        self.notebook = ttk.Notebook(content_frame)
-        self.notebook.pack(fill=tk.BOTH, expand=True)
+    def _build_auth_card(self, parent, username_attr, password_attr, button_text,
+                        button_command, show_register_link=False,
+                        show_remember=False, bottom_note=''):
+        tk.Label(
+            parent,
+            text="SCAU记忆翻牌游戏",
+            font=('微软雅黑', 22, 'bold'),
+            fg='#1e2e4f',
+            bg='#f7fbff'
+        ).pack(pady=(32, 8))
 
-        # 登录标签页
-        login_frame = tk.Frame(self.notebook)
-        self.notebook.add(login_frame, text="登录")
-        self._create_login_tab(login_frame)
+        tk.Label(
+            parent,
+            text="欢迎回到沉浸式的记忆挑战",
+            font=('Microsoft YaHei', 11),
+            fg='#5c6c8f',
+            bg='#f7fbff'
+        ).pack(pady=(0, 24))
 
-        # 注册标签页
-        register_frame = tk.Frame(self.notebook)
-        self.notebook.add(register_frame, text="注册")
-        self._create_register_tab(register_frame)
+        field_frame = tk.Frame(parent, bg='#f7fbff')
+        field_frame.pack(padx=32, fill=tk.X)
 
-    def _create_login_tab(self, parent):
-        """创建登录标签页"""
-        # 用户名
-        tk.Label(parent, text="用户名:", font=('Arial', 12)).pack(pady=(20, 5))
-        self.login_username = tk.Entry(parent, font=('Arial', 12), width=25)
-        self.login_username.pack(pady=5)
+        tk.Label(field_frame, text="用户名", font=('Microsoft YaHei', 10), bg='#f7fbff', fg='#5c6c8f').pack(anchor='w')
+        username_entry = tk.Entry(
+            field_frame,
+            font=('Microsoft YaHei', 12),
+            bd=0,
+            bg='#edf2fb',
+            relief=tk.FLAT,
+            highlightthickness=1,
+            highlightbackground='#dce4f2',
+            highlightcolor='#86a1d9',
+            insertbackground='#1a2437'
+        )
+        username_entry.pack(fill=tk.X, pady=(2, 12))
+        setattr(self, username_attr, username_entry)
 
-        # 密码
-        tk.Label(parent, text="密码:", font=('Arial', 12)).pack(pady=(10, 5))
-        self.login_password = tk.Entry(parent, font=('Arial', 12), width=25, show='*')
-        self.login_password.pack(pady=5)
+        tk.Label(field_frame, text="密码", font=('Microsoft YaHei', 10), bg='#f7fbff', fg='#5c6c8f').pack(anchor='w')
+        password_entry = tk.Entry(
+            field_frame,
+            font=('Microsoft YaHei', 12),
+            bd=0,
+            bg='#edf2fb',
+            relief=tk.FLAT,
+            show='*',
+            highlightthickness=1,
+            highlightbackground='#dce4f2',
+            highlightcolor='#86a1d9',
+            insertbackground='#1a2437'
+        )
+        password_entry.pack(fill=tk.X, pady=(2, 8))
+        setattr(self, password_attr, password_entry)
 
-        # 登录按钮
+        if show_remember:
+            option_frame = tk.Frame(parent, bg='#f7fbff')
+            option_frame.pack(fill=tk.X, padx=34, pady=(6, 18))
+
+            self.remember_var = tk.IntVar(value=1)
+            tk.Checkbutton(
+                option_frame,
+                text="记住密码",
+                variable=self.remember_var,
+                bg='#f7fbff',
+                fg='#5c6c8f',
+                activebackground='#f7fbff',
+                bd=0,
+                highlightthickness=0,
+                selectcolor='#edf2fb'
+            ).pack(side=tk.LEFT)
+
+            forget_label = tk.Label(
+                option_frame,
+                text="忘记密码？",
+                font=('Microsoft YaHei', 10, 'underline'),
+                fg='#7fa3d9',
+                bg='#f7fbff',
+                cursor='hand2'
+            )
+            forget_label.pack(side=tk.RIGHT)
+
         login_btn = tk.Button(
             parent,
-            text="登录",
-            font=('Arial', 14, 'bold'),
-            bg='#5CB85C',
-            fg='white',
-            width=20,
-            height=2,
-            command=self._handle_login
+            text=button_text,
+            font=('Microsoft YaHei', 14, 'bold'),
+            bg='#ffffff',
+            fg='#1e2e4f',
+            relief=tk.FLAT,
+            bd=0,
+            highlightthickness=0,
+            padx=10,
+            pady=10,
+            command=button_command
         )
-        login_btn.pack(pady=30)
+        login_btn.pack(padx=32, pady=(0, 18), fill=tk.X)
 
-        # 提示信息
-        tip_label = tk.Label(
-            parent,
-            text="提示：首次使用请先注册账号和密码",
-            font=('Arial', 10),
-            fg='gray'
-        )
-        tip_label.pack(pady=10)
+        if show_register_link:
+            register_link = tk.Label(
+                parent,
+                text="没有账号？立即注册",
+                font=('Microsoft YaHei', 10, 'underline'),
+                fg='#3c7acb',
+                bg='#f7fbff',
+                cursor='hand2'
+            )
+            register_link.pack()
+            register_link.bind("<Button-1>", lambda event: self._show_register_card())
 
-    def _create_register_tab(self, parent):
-        """创建注册标签页"""
-        # 用户名
-        tk.Label(parent, text="用户名:", font=('Arial', 12)).pack(pady=(20, 5))
-        self.register_username = tk.Entry(parent, font=('Arial', 12), width=25)
-        self.register_username.pack(pady=5)
-
-        # 密码
-        tk.Label(parent, text="密码:", font=('Arial', 12)).pack(pady=(10, 5))
-        self.register_password = tk.Entry(parent, font=('Arial', 12), width=25, show='*')
-        self.register_password.pack(pady=5)
-
-        # 注册按钮
-        register_btn = tk.Button(
-            parent,
-            text="注册",
-            font=('Arial', 14, 'bold'),
-            bg='#4A90E2',
-            fg='white',
-            width=20,
-            height=2,
-            command=self._handle_register
-        )
-        register_btn.pack(pady=30)
-
-        # 新手福利提示
-        bonus_label = tk.Label(
-            parent,
-            text="🎁 新手福利：注册即送500积分！",
-            font=('Arial', 11, 'bold'),
-            fg='#F0AD4E'
-        )
-        bonus_label.pack(pady=10)
+        if bottom_note:
+            tk.Label(
+                parent,
+                text=bottom_note,
+                font=('Microsoft YaHei', 9),
+                fg='#98a6bf',
+                bg='#f7fbff'
+            ).pack(pady=(18, 0))
 
     def _handle_login(self):
         """处理登录"""
@@ -177,8 +260,10 @@ class LoginWindow:
 
     def _handle_register(self):
         """处理注册"""
-        username = self.register_username.get().strip()
-        password = self.register_password.get().strip()
+        username_entry = getattr(self, 'register_username_entry', None)
+        password_entry = getattr(self, 'register_password_entry', None)
+        username = username_entry.get().strip() if username_entry else ''
+        password = password_entry.get().strip() if password_entry else ''
 
         if not username or not password:
             messagebox.showwarning("提示", "请输入用户名和密码")
@@ -206,10 +291,25 @@ class LoginWindow:
 
         messagebox.showinfo("成功", f"注册成功！欢迎 {username}！\n获得新手奖励：500积分")
 
-        # 切换到登录标签页
-        self.notebook.select(0)
+        # 清除并聚焦登录框
+        self._show_login_card()
         self.login_username.delete(0, tk.END)
         self.login_username.insert(0, username)
+
+    def _open_register_dialog(self):
+        """弹出注册窗口（登录窗体隐藏）"""
+        if self.register_window and tk.Toplevel.winfo_exists(self.register_window):
+            return
+
+        self._show_register_card()
+
+    def _show_register_card(self):
+        if getattr(self, 'register_card_frame', None):
+            self.register_card_frame.lift()
+
+    def _show_login_card(self):
+        if getattr(self, 'login_card_frame', None):
+            self.login_card_frame.lift()
 
     def _load_players(self):
         """加载玩家数据库"""

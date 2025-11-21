@@ -396,7 +396,7 @@ class GameWindow:
         self.game.start_game()
 
         # 更新UI
-        mode_text = "普通模式 (4x4)" if mode == 'normal' else "终极挑战 (6x6)"
+        mode_text = "普通模式 (4x4)" if mode == 'normal' else "终极挑战 (6x6 逻辑 / 9x4 显示)"
         self.mode_label.config(text=f"模式: {mode_text}")
 
         # 根据模式调整窗口尺寸并居中（终极模式更大以容纳 6x6 卡片）
@@ -434,10 +434,10 @@ class GameWindow:
 
         self.card_buttons = []
 
-        grid_size = self.game.grid_size
+        rows, cols = self._get_display_grid_dimensions()
 
         # 自适应画布尺寸，确保网格居中且全部可见
-        padding = 14 if grid_size <= 4 else 6
+        padding = 14 if cols <= 4 and rows <= 4 else 6
         ratio = 1.42
 
         # 创建带纹理的背景 Canvas
@@ -455,36 +455,56 @@ class GameWindow:
         # 计算卡片尺寸（根据画布自适应）与居中偏移
         canvas_w = bg_canvas.winfo_width()
         canvas_h = bg_canvas.winfo_height()
-        max_w_per_card = (canvas_w - (grid_size + 1) * padding) / grid_size
-        max_h_per_card = (canvas_h - (grid_size + 1) * padding) / grid_size
+        max_w_per_card = (canvas_w - (cols + 1) * padding) / cols
+        max_h_per_card = (canvas_h - (rows + 1) * padding) / rows
         card_w = int(min(max_w_per_card, max_h_per_card / ratio))
         if card_w < 58:
             card_w = 58
         card_h = int(card_w * ratio)
 
-        total_w = grid_size * card_w + (grid_size + 1) * padding
-        total_h = grid_size * card_h + (grid_size + 1) * padding
+        total_w = cols * card_w + (cols + 1) * padding
+        total_h = rows * card_h + (rows + 1) * padding
         start_x = max(0, (canvas_w - total_w) // 2)
         start_y = max(0, (canvas_h - total_h) // 2)
 
-        for row in range(grid_size):
-            for col in range(grid_size):
-                card_index = row * grid_size + col
-                x = start_x + padding + col * (card_w + padding)
-                y = start_y + padding + row * (card_h + padding)
+        total_cards = len(getattr(self.game, 'cards', []))
+        for card_index in range(total_cards):
+            row = card_index // cols
+            col = card_index % cols
+            x = start_x + padding + col * (card_w + padding)
+            y = start_y + padding + row * (card_h + padding)
 
-                pc = PlayingCard(bg_canvas, width=card_w, height=card_h, corner_radius=14,
-                                  command=lambda idx=card_index: self._on_card_click(idx))
-                try:
-                    pc._render_back()
-                except Exception:
-                    pass
+            pc = PlayingCard(bg_canvas, width=card_w, height=card_h, corner_radius=14,
+                              command=lambda idx=card_index: self._on_card_click(idx))
+            try:
+                pc._render_back()
+            except Exception:
+                pass
 
-                # place on canvas
-                bg_canvas.create_window(x, y, window=pc, anchor=tk.NW)
-                self.card_buttons.append(pc)
+            # place on canvas
+            bg_canvas.create_window(x, y, window=pc, anchor=tk.NW)
+            self.card_buttons.append(pc)
 
         self._grid_canvas = bg_canvas
+
+    def _get_display_grid_dimensions(self):
+        """根据当前模式返回展示用的行列数"""
+        if not self.game:
+            return 4, 4
+        if self.game.mode == 'ultimate':
+            rows, cols = 4, 9
+        else:
+            size = self.game.grid_size or 4
+            rows = cols = size
+        total_cards = len(getattr(self.game, 'cards', []))
+        if total_cards and rows * cols != total_cards:
+            side = int(total_cards ** 0.5)
+            if side * side == total_cards:
+                rows = cols = side
+            else:
+                rows = min(rows, total_cards)
+                cols = max(1, (total_cards + rows - 1) // rows)
+        return rows, cols
 
     def _recenter_grid(self):
         try:
