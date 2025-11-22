@@ -11,7 +11,7 @@ from tkinter import messagebox
 import math 
 from gui.game_window import GameWindow
 from gui.shop_window import ShopWindow
-from gui.history_window import HistoryWindow
+from gui.career_window import CareerWindow
 from gui.profile_window import ProfileWindow
 from config import UIConfig
 
@@ -229,7 +229,7 @@ class MainWindow:
         buttons_config = [
             ("开始游戏", self._start_game, 'yellow'),
             ("道具商城", self._open_shop, 'blue'),
-            ("历史记录", self._open_history, 'purple'), # 葡萄紫
+            ("游戏生涯", self._open_career, 'purple'), # 葡萄紫
             ("个人主页", self._open_profile, 'green')   # 薄荷绿
         ]
 
@@ -248,8 +248,8 @@ class MainWindow:
     def _open_shop(self):
         ShopWindow(self.window, self.player)
         
-    def _open_history(self):
-        HistoryWindow(self.window, self.player)
+    def _open_career(self):
+        CareerWindow(self.window, self.player)
 
     def _open_profile(self):
         ProfileWindow(self.window, self.player)

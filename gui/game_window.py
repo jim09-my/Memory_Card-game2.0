@@ -10,7 +10,7 @@ import tkinter as tk
 from tkinter import messagebox
 import math
 from core.game import Game
-from config import GameConfig, UIConfig, ItemConfig
+from config import GameConfig, UIConfig, ItemConfig, AchievementConfig
 from managers.data_manager import save_player
 # 引入通用组件
 from gui.widgets import PlayingCard, ItemButton, RoundButton
@@ -246,6 +246,7 @@ class GameWindow:
     def _start_game(self, mode):
         self.game = Game(mode=mode, player=self.player)
         self.game.start_game()
+        self._prev_achievements = set(self.player.achievements)
         if mode == 'ultimate': self.window.geometry("1200x800")
         else: self.window.geometry("1000x750")
         self._create_card_grid()
@@ -310,6 +311,20 @@ class GameWindow:
         if self._end_handled: return
         self._end_handled = True
         messagebox.showinfo("恭喜", f"通关成功！\n获得积分: {self.game._calculate_reward(0)}")
+        if hasattr(self.player, 'achievements'):
+            prev = getattr(self, '_prev_achievements', set())
+            current = set(self.player.achievements)
+            diff = current - prev
+            if diff:
+                defs = {a.get('id'): a for a in getattr(AchievementConfig, 'ACHIEVEMENTS', [])}
+                lines = []
+                for aid in diff:
+                    a = defs.get(aid, {})
+                    name = a.get('name', aid)
+                    icon = a.get('icon', '')
+                    reward = a.get('reward', 0)
+                    lines.append(f"{icon} {name} (+{reward}积分)")
+                messagebox.showinfo("成就解锁", "\n".join(lines))
         self.on_close() if self.on_close else self.window.destroy()
 
     def _on_game_failed(self):

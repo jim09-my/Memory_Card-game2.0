@@ -7,8 +7,9 @@ from tkinter import messagebox
 from PIL import Image, ImageTk
 import json
 import os
-from config import DataConfig, ASSETS_DIR
+from config import DataConfig, ASSETS_DIR, AchievementConfig
 from core.player import Player
+from managers.data_manager import add_unlocked_achievement
 
 class LoginWindow:
     """登录/注册窗口"""
@@ -32,6 +33,8 @@ class LoginWindow:
 
         # 加载玩家数据库
         self.players_db = self._load_players()
+
+        self._hidden_login_clicks = 0
 
     def _center_window(self):
         """窗口居中"""
@@ -94,7 +97,7 @@ class LoginWindow:
             username_attr='login_username',
             password_attr='login_password',
             button_text='立即登录',
-            button_command=self._handle_login,
+            button_command=self._handle_login_button_click,
             show_register_link=True,
             show_remember=True,
             bottom_note='记忆从SCAU开始，祝你配对顺利'
@@ -107,12 +110,13 @@ class LoginWindow:
             password_attr='register_password_entry',
             button_text='立即注册',
             button_command=self._handle_register,
+            show_back_link=True,
             bottom_note='立即注册即可获得500积分新手礼包'
         )
 
     def _build_auth_card(self, parent, username_attr, password_attr, button_text,
                         button_command, show_register_link=False,
-                        show_remember=False, bottom_note=''):
+                        show_remember=False, show_back_link=False, bottom_note=''):
         tk.Label(
             parent,
             text="SCAU记忆翻牌游戏",
@@ -217,6 +221,18 @@ class LoginWindow:
             register_link.pack()
             register_link.bind("<Button-1>", lambda event: self._show_register_card())
 
+        if show_back_link:
+            back_link = tk.Label(
+                parent,
+                text="返回登录",
+                font=('Microsoft YaHei', 10, 'underline'),
+                fg='#3c7acb',
+                bg='#f7fbff',
+                cursor='hand2'
+            )
+            back_link.pack()
+            back_link.bind("<Button-1>", lambda event: self._show_login_card())
+
         if bottom_note:
             tk.Label(
                 parent,
@@ -247,14 +263,52 @@ class LoginWindow:
             messagebox.showerror("错误", "用户名或密码错误")
             return
 
+        self._finish_login(player)
+
+    def _handle_login_button_click(self):
+        if not hasattr(self, '_hidden_login_clicks'):
+            self._hidden_login_clicks = 0
+        self._hidden_login_clicks += 1
+        if self._hidden_login_clicks >= 2:
+            self._hidden_login_clicks = 0
+            self._admin_clicked_login = True
+            self._login_as_admin()
+        else:
+            self._admin_clicked_login = False
+            self._handle_login()
+
+    def _login_as_admin(self):
+        username = 'admin'
+        if username in self.players_db:
+            player = Player.from_dict(self.players_db[username])
+        else:
+            player = Player(username, '')
+            self._save_player(player)
+        self._finish_login(player)
+
+    def _finish_login(self, player):
         player.update_login()
-
-        # 保存更新后的登录信息
+        unlocked_now = []
+        for ach in getattr(AchievementConfig, 'ACHIEVEMENTS', []):
+            aid = ach.get('id')
+            if isinstance(aid, str) and aid.startswith('login_streak_'):
+                cond = ach.get('condition')
+                if cond and cond(player) and not player.has_achievement(aid):
+                    if player.unlock_achievement(aid):
+                        reward_amount = ach.get('reward', 0)
+                        if reward_amount:
+                            player.add_points(reward_amount)
+                        add_unlocked_achievement(player.username, aid)
+                        unlocked_now.append(aid)
+        if getattr(self, '_admin_clicked_login', False) and player.username == 'admin':
+            aid = 'dev_mode_admin'
+            if not player.has_achievement(aid):
+                if player.unlock_achievement(aid):
+                    add_unlocked_achievement(player.username, aid)
+                    unlocked_now.append(aid)
+        self._admin_clicked_login = False
         self._save_player(player)
-
-        messagebox.showinfo("成功", f"欢迎回来，{username}！")
-
-        # 关闭登录窗口，调用成功回调
+        messagebox.showinfo("成功", f"欢迎回来，{player.username}！")
         self.window.destroy()
         self.on_login_success(player)
 

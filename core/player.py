@@ -243,7 +243,8 @@ class Player:
         """获取平均用时"""
         if self.completed_games == 0:
             return 0
-        return self.total_time / self.completed_games
+        total_completed_time = sum(r.get('time_used', 0) for r in self.game_records if r.get('completed'))
+        return total_completed_time / self.completed_games
 
     def get_average_moves(self):
         """获取平均步数"""
