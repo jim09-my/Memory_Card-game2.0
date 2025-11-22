@@ -94,7 +94,7 @@ class CareerWindow:
             f.place_forget()
         page = self.pages.get(key)
         if page:
-            page.place(x=0, rely=0.02, relwidth=0.95, relheight=0.71)
+            page.place(x=0, rely=0.02, relwidth=0.98, relheight=0.71)
         self._update_nav_styles(key)
 
     def _update_nav_styles(self, active_key):
@@ -215,6 +215,7 @@ class CareerWindow:
         tk.Label(row, text=date, font=('Arial', 11), fg='#90A4AE', bg=bg_col).pack(side=tk.LEFT, padx=5)
         time_s = self._fmt_time(record.get('time_used'))
         tk.Label(row, text=f"⏱ {time_s}", font=('Arial', 11), fg='#78909C', bg=bg_col).pack(side=tk.LEFT, padx=10)
+        tk.Label(row, text=f"🎯 {int(record.get('score', 0))}", font=('Arial', 11), fg='#AB47BC', bg=bg_col).pack(side=tk.LEFT, padx=10)
         score = record.get('reward', 0)
         score_col = '#FFA726' if score > 0 else '#9E9E9E'
         tk.Label(row, text=f"+{score}", font=('Arial', 13, 'bold'), fg=score_col, bg=bg_col).pack(side=tk.RIGHT, padx=5)
@@ -228,8 +229,9 @@ class CareerWindow:
         wins = sum(1 for r in records if r.get('completed'))
         avg_time = int(sum(r.get('time_used', 0) for r in records if r.get('completed'))/max(1, wins))
         avg_moves = int(sum(r.get('moves', 0) for r in records)/max(1, total))
+        avg_score = int(sum(r.get('score', 0) for r in records)/max(1, total))
         win_rate = int(wins/max(1, total)*100)
-        self.summary_label.config(text=f"场次 {total} | 通关率 {win_rate}% | 平均用时 {avg_time}s | 平均步数 {avg_moves}")
+        self.summary_label.config(text=f"场次 {total} | 通关率 {win_rate}% | 平均用时 {avg_time}s | 平均步数 {avg_moves} | 平均得分 {avg_score}")
 
 
 
@@ -264,7 +266,12 @@ class CareerWindow:
         defs = getattr(AchievementConfig, 'ACHIEVEMENTS', [])
         cat = self.ach_cat_var.get()
         items = defs if cat == '全部' else [a for a in defs if a.get('category') == cat]
-        items.sort(key=lambda a: (a.get('id') not in self.player.achievements,))
+        items.sort(key=lambda a: (
+            a.get('id') not in self.player.achievements,
+            (a.get('category') or ''),
+            -(a.get('reward', 0) or 0),
+            (a.get('name', '') or '')
+        ))
 
         if not items:
             tk.Label(self.ach_scrollable, text='暂无成就', bg=UIConfig.COLORS['primary'], fg='#90A4AE').pack(pady=30)
@@ -287,6 +294,9 @@ class CareerWindow:
             tk.Label(f, text=a.get('name',''), font=('Arial Rounded MT Bold', 13), fg=name_fg, bg=card_bg).pack(anchor='w')
             if a.get('hidden'):
                 tk.Label(f, text='隐藏', font=('Arial', 10), fg='#9E9E9E', bg=card_bg).place(relx=1.0, x=-8, y=8, anchor='ne')
+            else:
+                cat_text = a.get('category','') or '其他'
+                tk.Label(f, text=cat_text, font=('Arial', 10), fg='#00796B', bg=card_bg).place(relx=1.0, x=-8, y=8, anchor='ne')
             tk.Label(f, text=a.get('description',''), font=('Arial', 11), fg=desc_fg, bg=card_bg).pack(anchor='w')
             tk.Label(f, text=f"奖励 {a.get('reward',0)}", font=('Arial', 11, 'bold'), fg=reward_fg, bg=card_bg).pack(anchor='w', pady=(4,0))
             status = '已解锁' if unlocked else '未解锁'

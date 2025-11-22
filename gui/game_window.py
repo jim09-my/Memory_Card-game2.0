@@ -140,6 +140,12 @@ class GameWindow:
         self._create_pill_label(stats_c, "⏱ 00:00", '#26A69A', 'time_label')
         tk.Frame(stats_c, bg=UIConfig.COLORS['primary_dark'], width=20).pack(side=tk.LEFT)
         self._create_pill_label(stats_c, "⭐ 分数: 0", '#FFA726', 'score_label')
+        tk.Frame(stats_c, bg=UIConfig.COLORS['primary_dark'], width=20).pack(side=tk.LEFT)
+        self.pause_button = RoundButton(
+            stats_c, text="⏸ 暂停", command=self._toggle_pause,
+            width=100, height=40, bg_color='#42A5F5', hover_color='#64B5F6', text_color='white'
+        )
+        self.pause_button.pack(side=tk.LEFT)
 
         # 右侧退出
         exit_c = tk.Frame(top_bar, bg=UIConfig.COLORS['primary_dark'])
@@ -240,7 +246,7 @@ class GameWindow:
                    theme='yellow', command=lambda: start('normal')).pack(pady=10)
         
         # 终极挑战 (淡红 - 挑战)
-        ModeButton(btn_frame, text="终极挑战", sub_text="6x6 网格 | 限时挑战",
+        ModeButton(btn_frame, text="终极挑战", sub_text="4x9 网格 | 限时挑战",
                    theme='red', command=lambda: start('ultimate')).pack(pady=10)
 
     def _start_game(self, mode):
@@ -303,14 +309,37 @@ class GameWindow:
         if not self.game or self._end_handled: return
         time_str = self.game.timer.get_time_display()
         self.time_label.config(text=f"⏱ {time_str}")
-        self.score_label.config(text=f"得分: {self.player.points}")
+        self.score_label.config(text=f"得分: {self.game.score}")
         if self.game.timer.is_time_up(): self._on_game_failed()
         else: self.update_task = self.window.after(100, self._update_loop)
+
+    def _toggle_pause(self):
+        if not self.game or not self.game.is_started:
+            return
+        if self.game.is_paused:
+            self.game.resume_game()
+            try:
+                self.pause_button.text = "⏸ 暂停"
+                self.pause_button._draw()
+            except Exception:
+                pass
+        else:
+            self.game.pause_game()
+            try:
+                self.pause_button.text = "▶ 继续"
+                self.pause_button._draw()
+            except Exception:
+                pass
 
     def _on_game_complete(self):
         if self._end_handled: return
         self._end_handled = True
-        messagebox.showinfo("恭喜", f"通关成功！\n获得积分: {self.game._calculate_reward(0)}")
+        try:
+            last = self.player.game_records[-1] if getattr(self.player, 'game_records', None) else None
+            reward = last.get('reward', 0) if (last and last.get('completed')) else self.game._calculate_reward(int(self.game.timer.get_elapsed_time()))
+        except Exception:
+            reward = self.game._calculate_reward(int(self.game.timer.get_elapsed_time()))
+        messagebox.showinfo("恭喜", f"通关成功！\n获得积分: {reward}")
         if hasattr(self.player, 'achievements'):
             prev = getattr(self, '_prev_achievements', set())
             current = set(self.player.achievements)
@@ -360,12 +389,37 @@ class GameWindow:
         elif item_id == 'time_extend':
             self.game.extend_time(30)
             messagebox.showinfo("道具", "时间延长 30 秒！")
-        elif item_id == 'shuffle_prevent': messagebox.showinfo("道具", "定身术已使用！")
-        elif item_id == 'undo': messagebox.showinfo("道具", "时光倒流已使用！")
-        self.player.use_item(item_id)
+        elif item_id == 'shuffle_prevent':
+            messagebox.showinfo("道具", "定身术已使用！")
+            self.player.use_item(item_id)
+        elif item_id == 'undo':
+            if self.game.undo_move():
+                self._render_cards_state()
+                messagebox.showinfo("道具", "时光倒流已使用！")
         save_player(self.player)
 
     def _restore_hint(self):
         for idx in self.game.hint_cards:
             if not self.game.cards[idx].is_matched: self.card_buttons[idx].show_back()
         self.game.hide_hint()
+
+    def _render_cards_state(self):
+        if not self.game: return
+        for i, card in enumerate(self.game.cards):
+            r, s = card.value
+            if card.is_matched:
+                self.card_buttons[i].show_front(r, s)
+                try: self.card_buttons[i].config(state='disabled')
+                except: pass
+            elif card.is_flipped or card.is_revealed:
+                self.card_buttons[i].show_front(r, s)
+                try: self.card_buttons[i].config(state='normal')
+                except: pass
+            else:
+                self.card_buttons[i].show_back()
+                try: self.card_buttons[i].config(state='normal')
+                except: pass
+            if not card.is_matched:
+                try: delattr(self.card_buttons[i], '_is_vanished')
+                except: pass
+        self.animating = False

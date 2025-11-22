@@ -126,6 +126,8 @@ class Game:
             print("该卡牌无法翻转")
             return False
 
+        self._save_state()
+
         # 已经有两张翻开的卡牌或正在处理上一对
         if self.resolving_pair or len(self.flipped_cards) >= 2:
             print("已有两张卡牌翻开，请先处理")
@@ -155,8 +157,7 @@ class Game:
 
         self.moves += 1
 
-        # 保存状态（用于撤销）
-        self._save_state()
+        
 
         pair = (idx1, idx2)
         match = card1.value == card2.value
@@ -200,7 +201,10 @@ class Game:
             'matched_pairs': self.matched_pairs,
             'moves': self.moves,
             'score': self.score,
-            'mistakes': self.mistakes
+            'mistakes': self.mistakes,
+            'resolving_pair': self.resolving_pair,
+            'last_pair': self.last_pair,
+            'last_match': self.last_match
         }
         self.move_history.push(state)
 
@@ -227,6 +231,9 @@ class Game:
         self.moves = state['moves']
         self.score = state['score']
         self.mistakes = state['mistakes']
+        self.resolving_pair = state.get('resolving_pair', False)
+        self.last_pair = state.get('last_pair')
+        self.last_match = state.get('last_match')
 
         # 使用道具
         if self.player:
@@ -483,10 +490,15 @@ class Game:
                 base_reward += 100
             elif time_used < 120:
                 base_reward += 50
-        else:  # ultimate
-            if time_used < 240:
+        elif self.mode == 'ultimate':
+            if time_used < 60:
                 base_reward += 300
-            elif time_used < 360:
+            elif time_used < 90:
+                base_reward += 150
+        else:
+            if time_used < 90:
+                base_reward += 300
+            elif time_used < 135:
                 base_reward += 150
 
         # 失误惩罚
