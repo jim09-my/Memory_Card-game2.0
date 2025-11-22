@@ -3,7 +3,7 @@
     "username": "123",
     "email": "123",
     "password": "",
-    "points": 1060,
+    "points": 110,
     "level": 2,
     "experience": 0,
     "total_points_earned": 1460,
@@ -13,14 +13,16 @@
     "total_time": 102,
     "best_time_normal": 16,
     "best_time_ultimate": null,
-    "items": {},
+    "items": {
+      "hint": 1
+    },
     "achievements": [
       "first_game",
       "speed_king"
     ],
     "created_at": 1763481646.6303117,
-    "last_login": 1763643956.771863,
-    "consecutive_days": 2,
+    "last_login": 1763802378.9333766,
+    "consecutive_days": 1,
     "game_records": [
       {
         "mode": "normal",

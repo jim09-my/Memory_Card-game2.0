@@ -21,7 +21,7 @@ def ensure_data_files():
 
     data_dir = os.path.dirname(DataConfig.PLAYERS_FILE)
     os.makedirs(data_dir, exist_ok=True)
-
+                               
     for path, default_content in defaults.items():
         if not os.path.exists(path):
             with open(path, 'w', encoding='utf-8') as f:

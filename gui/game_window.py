@@ -1,959 +1,356 @@
 """
-游戏窗口
-核心游戏界面
+游戏窗口 - v4.2 完整重制版
+包含：
+1. 游戏主界面 (Teal/Yellow 配色, 居中布局, 胶囊数据栏, 可爱道具栏)
+2. 模式选择弹窗 (清新扁平风格, 圆润按钮)
+3. 配对消失动画
 """
 
 import tkinter as tk
 from tkinter import messagebox
-import random
+import math
 from core.game import Game
-from config import GameConfig, UIConfig, PointsConfig, ItemConfig
+from config import GameConfig, UIConfig, ItemConfig
 from managers.data_manager import save_player
-from gui.widgets import PlayingCard
-from tkinter import ttk
+# 引入通用组件
+from gui.widgets import PlayingCard, ItemButton, RoundButton
 
+# --- 内部类：模式选择按钮 (清新扁平风格) ---
+class ModeButton(tk.Canvas):
+    def __init__(self, master, text, sub_text, command=None, width=220, height=80, theme='yellow'):
+        super().__init__(master, width=width, height=height, bg='#E0F7FA', highlightthickness=0, bd=0)
+        self.text = text
+        self.sub_text = sub_text
+        self._command = command
+        self.w, self.h = width, height
+        self.theme = theme
+        self._state = 'normal'
+        
+        # 配色方案
+        self.colors = {
+            'yellow': ('#FFF59D', '#FBC02D', '#5D4037'), # 普通模式: 柔黄 + 深黄阴影 + 深褐字
+            'red':    ('#FFCCBC', '#FF7043', '#BF360C')   # 终极模式: 淡红 + 深红阴影 + 深红字
+        }
+        
+        self.bind('<Enter>', self._on_enter)
+        self.bind('<Leave>', self._on_leave)
+        self.bind('<Button-1>', self._on_press)
+        self.bind('<ButtonRelease-1>', self._on_release)
+        self._draw()
+
+    def _draw(self):
+        self.delete('all')
+        scale = 0.96 if self._state == 'active' else 1.0
+        w, h = self.w * scale, self.h * scale
+        cx, cy = self.w/2, self.h/2
+        
+        bg_col, shadow_col, text_col = self.colors.get(self.theme, self.colors['yellow'])
+        if self._state == 'hover':
+            # 悬停变亮逻辑
+            if self.theme == 'yellow': bg_col = '#FFF9C4'
+            else: bg_col = '#FFAB91'
+
+        offset_y = 0 if self._state == 'active' else -4
+        shadow_h = 0 if self._state == 'active' else 4
+        
+        # 绘制圆角矩形 (胶囊)
+        r = h/2
+        x1, y1 = cx - w/2, cy - h/2
+        x2, y2 = cx + w/2, cy + h/2
+        
+        # 阴影
+        self._draw_capsule(x1, y1 + offset_y + shadow_h, x2, y2 + offset_y + shadow_h, r, shadow_col)
+        # 主体
+        self._draw_capsule(x1, y1 + offset_y, x2, y2 + offset_y, r, bg_col)
+        
+        # 文字
+        self.create_text(cx, cy + offset_y - 8, text=self.text, font=('Arial Rounded MT Bold', 14, 'bold'), fill=text_col)
+        self.create_text(cx, cy + offset_y + 12, text=self.sub_text, font=('Arial', 10), fill=text_col)
+
+    def _draw_capsule(self, x1, y1, x2, y2, r, fill):
+        self.create_arc(x1, y1, x1+2*r, y1+2*r, start=90, extent=180, fill=fill, outline="")
+        self.create_arc(x2-2*r, y1, x2, y1+2*r, start=270, extent=180, fill=fill, outline="")
+        self.create_rectangle(x1+r, y1, x2-r, y2+1, fill=fill, outline="")
+
+    def _on_enter(self, e): self._state = 'hover'; self.config(cursor='hand2'); self._draw()
+    def _on_leave(self, e): self._state = 'normal'; self.config(cursor=''); self._draw()
+    def _on_press(self, e): self._state = 'active'; self._draw()
+    def _on_release(self, e): 
+        if self._state == 'active': 
+            self._state = 'hover'; self._draw()
+            if self._command: self.after(50, self._command)
+
+# --- 游戏主窗口类 ---
 class GameWindow:
-    """游戏窗口类"""
-
     def __init__(self, parent, player, on_close=None):
-        """
-        初始化游戏窗口
-        :param parent: 父窗口
-        :param player: 玩家对象
-        :param on_close: 关闭回调
-        """
         self.parent = parent
         self.player = player
         self.on_close = on_close
         self.game = None
 
-        # 注册玩家变更监听（用于道具/积分等即时刷新）
-        if hasattr(self.player, 'add_change_listener'):
-            try:
-                self.player.add_change_listener(self._on_player_change)
-            except Exception:
-                pass
-
-        # 创建窗口
         self.window = tk.Toplevel(parent)
-        self.window.title("记忆翻牌游戏")
-        # 使用 1000x800 的窗口大小，适配大部分屏幕
-        self.window.geometry("1000x800")
-        # 窗口居中
-        try:
-            self._center_window()
-        except Exception:
-            pass
+        self.window.title("记忆翻牌")
+        self.window.geometry(f"{UIConfig.WINDOW_WIDTH}x{UIConfig.WINDOW_HEIGHT}")
+        self.window.config(bg=UIConfig.COLORS['primary']) 
+        
+        self._center_window()
         self.window.resizable(False, False)
 
-        # 卡牌按钮
         self.card_buttons = []
-
-        # 动画状态
         self.animating = False
-        self.selected_cards = []
-        self.pending_resolution_task = None
-        self.pending_mismatch = False
-
-        # 更新任务ID
         self.update_task = None
-
-        # 结束处理标志，防止重复弹窗或重复销毁
         self._end_handled = False
-
-        # 创建界面
-        self._create_widgets()
-
-        # 显示模式选择
-        self._show_mode_selection()
-
-        # 窗口关闭事件
+        
+        self._create_ui()
+        
+        if hasattr(self.player, 'add_change_listener'):
+            self.player.add_change_listener(self._on_player_change)
+        
         self.window.protocol("WM_DELETE_WINDOW", self._on_closing)
-
-    def _create_widgets(self):
-        """创建界面组件"""
-        # 顶部信息栏
-        self._create_top_bar()
-
-        # 游戏区域
-        self._create_game_area()
-
-        # 底部面板（包含控制和道具）
-        self.bottom_panel = tk.Frame(self.window, bg='#ECF0F1')
-        self.bottom_panel.pack(fill=tk.X, side=tk.BOTTOM)
-
-        # 控制按钮区
-        self._create_control_panel(self.bottom_panel)
-
-        # 道具栏
-        self._create_item_panel(self.bottom_panel)
-
-        # 统一风格
-        try:
-            self._unify_global_style()
-        except Exception:
-            pass
+        
+        # 延迟显示模式选择
+        self.window.after(100, self._show_mode_selection)
 
     def _center_window(self):
-        """把当前窗口居中到屏幕中央"""
-        try:
-            self.window.update_idletasks()
-            width = self.window.winfo_width()
-            height = self.window.winfo_height()
-            # 如果尚未得到尺寸，使用默认值
-            if not width or width <= 1:
-                width = 1000
-            if not height or height <= 1:
-                height = 800
-            x = (self.window.winfo_screenwidth() // 2) - (width // 2)
-            y = (self.window.winfo_screenheight() // 2) - (height // 2)
-            self.window.geometry(f"{width}x{height}+{x}+{y}")
-        except Exception:
-            pass
+        self.window.update_idletasks()
+        w = self.window.winfo_width()
+        h = self.window.winfo_height()
+        x = (self.window.winfo_screenwidth() // 2) - (w // 2)
+        y = (self.window.winfo_screenheight() // 2) - (h // 2)
+        self.window.geometry(f"+{x}+{y}")
 
-    def _create_top_bar(self):
-        """创建顶部信息栏"""
-        top_frame = tk.Frame(self.window, bg='#34495E', height=80)
-        top_frame.pack(fill=tk.X)
-        top_frame.pack_propagate(False)
+    def _create_ui(self):
+        """UI 结构"""
+        # 1. 顶部状态栏
+        top_bar = tk.Frame(self.window, bg=UIConfig.COLORS['primary_dark'], height=70, pady=5)
+        top_bar.pack(fill=tk.X)
+        top_bar.grid_columnconfigure(0, weight=1)
+        top_bar.grid_columnconfigure(1, weight=2)
+        top_bar.grid_columnconfigure(2, weight=1)
+        
+        # 左侧玩家
+        p_frame = tk.Frame(top_bar, bg=UIConfig.COLORS['primary_dark'])
+        p_frame.grid(row=0, column=0, sticky='w', padx=20)
+        tk.Label(p_frame, text=f"👤 {self.player.username}", font=('Arial Rounded MT Bold', 14), 
+                 bg=UIConfig.COLORS['primary_dark'], fg='white').pack(anchor='w')
+        
+        # 中间数据
+        stats_c = tk.Frame(top_bar, bg=UIConfig.COLORS['primary_dark'])
+        stats_c.grid(row=0, column=1)
+        self._create_pill_label(stats_c, "⏱ 00:00", '#26A69A', 'time_label')
+        tk.Frame(stats_c, bg=UIConfig.COLORS['primary_dark'], width=20).pack(side=tk.LEFT)
+        self._create_pill_label(stats_c, "⭐ 分数: 0", '#FFA726', 'score_label')
 
-        # 左侧：玩家信息
-        left_frame = tk.Frame(top_frame, bg='#34495E')
-        left_frame.pack(side=tk.LEFT, padx=20)
+        # 右侧退出
+        exit_c = tk.Frame(top_bar, bg=UIConfig.COLORS['primary_dark'])
+        exit_c.grid(row=0, column=2, sticky='e', padx=20)
+        RoundButton(exit_c, text="🚪 退出", command=self._on_closing, 
+                    width=100, height=40, bg_color='#FF7043', hover_color='#FF8A65').pack()
 
-        self.player_label = tk.Label(
-            left_frame,
-            text=f"👤 {self.player.username}",
-            font=('Arial', 14, 'bold'),
-            bg='#34495E',
-            fg='white'
-        )
-        self.player_label.pack(anchor=tk.W)
+        # 2. 游戏区
+        self.game_frame = tk.Frame(self.window, bg=UIConfig.COLORS['primary'])
+        self.game_frame.pack(fill=tk.BOTH, expand=True, padx=40, pady=10)
+        
+        # 3. 底部道具
+        bottom_bar = tk.Frame(self.window, bg=UIConfig.COLORS['primary'], height=110, pady=10)
+        bottom_bar.pack(fill=tk.X, side=tk.BOTTOM)
+        
+        self.items_container = tk.Frame(bottom_bar, bg=UIConfig.COLORS['primary'])
+        self.items_container.pack(anchor=tk.CENTER)
+        self._create_item_buttons(self.items_container)
 
-        self.points_label = tk.Label(
-            left_frame,
-            text=f"💰 积分: {self.player.points}",
-            font=('Arial', 12),
-            bg='#34495E',
-            fg='#F0AD4E'
-        )
-        self.points_label.pack(anchor=tk.W)
+    def _create_pill_label(self, parent, text, color, attr_name):
+        canvas = tk.Canvas(parent, width=140, height=40, bg=UIConfig.COLORS['primary_dark'], highlightthickness=0, bd=0)
+        canvas.pack(side=tk.LEFT)
+        r = 20
+        w, h = 140, 40
+        canvas.create_arc(0, 0, 2*r, 2*r, start=90, extent=90, fill=color, outline="")
+        canvas.create_arc(w-2*r, 0, w, 2*r, start=0, extent=90, fill=color, outline="")
+        canvas.create_arc(w-2*r, h-2*r, w, h, start=270, extent=90, fill=color, outline="")
+        canvas.create_arc(0, h-2*r, 2*r, h, start=180, extent=90, fill=color, outline="")
+        canvas.create_rectangle(r, 0, w-r, h, fill=color, outline="")
+        canvas.create_rectangle(0, r, w, h-r, fill=color, outline="")
+        
+        t_id = canvas.create_text(w/2, h/2, text=text, fill='white', font=('Arial Rounded MT Bold', 13))
+        
+        class LabelWrapper:
+            def config(self, text): canvas.itemconfig(t_id, text=text)
+        setattr(self, attr_name, LabelWrapper())
 
-        # 中间：游戏信息
-        center_frame = tk.Frame(top_frame, bg='#34495E')
-        center_frame.pack(side=tk.LEFT, expand=True)
-
-        self.mode_label = tk.Label(
-            center_frame,
-            text="模式: 未开始",
-            font=('Arial', 14, 'bold'),
-            bg='#34495E',
-            fg='white'
-        )
-        self.mode_label.pack()
-
-        info_frame = tk.Frame(center_frame, bg='#34495E')
-        info_frame.pack()
-
-        self.time_label = tk.Label(
-            info_frame,
-            text="⏱ 00:00",
-            font=('Arial', 12),
-            bg='#34495E',
-            fg='white'
-        )
-        self.time_label.pack(side=tk.LEFT, padx=10)
-
-        self.moves_label = tk.Label(
-            info_frame,
-            text="🔄 步数: 0",
-            font=('Arial', 12),
-            bg='#34495E',
-            fg='white'
-        )
-        self.moves_label.pack(side=tk.LEFT, padx=10)
-
-        self.pairs_label = tk.Label(
-            info_frame,
-            text="✓ 配对: 0/0",
-            font=('Arial', 12),
-            bg='#34495E',
-            fg='white'
-        )
-        self.pairs_label.pack(side=tk.LEFT, padx=10)
-
-        # 右侧：进度条
-        right_frame = tk.Frame(top_frame, bg='#34495E')
-        right_frame.pack(side=tk.RIGHT, padx=20)
-
-        tk.Label(
-            right_frame,
-            text="进度:",
-            font=('Arial', 11),
-            bg='#34495E',
-            fg='white'
-        ).pack()
-
-        self.progress_var = tk.IntVar(value=0)
-        self.progress_bar = tk.Scale(
-            right_frame,
-            from_=0,
-            to=100,
-            orient=tk.HORIZONTAL,
-            variable=self.progress_var,
-            length=150,
-            state='disabled',
-            bg='#34495E',
-            fg='white',
-            troughcolor='#2C3E50',
-            highlightthickness=0
-        )
-        self.progress_bar.pack()
-
-    def _create_game_area(self):
-        """创建游戏区域"""
-        self.game_frame = tk.Frame(self.window, bg='#ECF0F1', relief=tk.SUNKEN, bd=2)
-        self.game_frame.pack(fill=tk.BOTH, expand=True, padx=32, pady=(24, 10))
-
-    def _unify_global_style(self):
-        """应用全局色彩和样式规范"""
-        try:
-            style = ttk.Style()
-            style.configure('Game.TFrame', background=UIConfig.COLORS.get('primary', '#4ECDC4'))
-            style.configure('Card.TButton', background='#FFE66D', foreground='#333333', font=('Arial', 12, 'bold'))
-        except Exception:
-            pass
-        try:
-            self.game_frame.config(bg=UIConfig.COLORS.get('primary', '#4ECDC4'))
-        except Exception:
-            pass
-
-    def _draw_grid_pattern(self, canvas):
-        """在卡牌背景 Canvas 上绘制简单的网格/纹理"""
-        try:
-            w = canvas.winfo_width() or canvas['width'] if 'width' in canvas.keys() else canvas.winfo_reqwidth()
-            h = canvas.winfo_height() or canvas['height'] if 'height' in canvas.keys() else canvas.winfo_reqheight()
-            # draw light diagonal lines
-            step = 20
-            for x in range(0, int(w)+step, step):
-                canvas.create_line(x, 0, x - int(h), h, fill='#E6F6F2')
-            for x in range(0, int(w)+step, step):
-                canvas.create_line(x, 0, x + int(h), h, fill='#E6F6F2')
-        except Exception:
-            pass
-
-    def _create_control_panel(self, parent=None):
-        """创建控制面板"""
-        parent = parent or self.window
-        control_frame = tk.Frame(parent, bg='#ECF0F1', height=60)
-        control_frame.pack(fill=tk.X, padx=20, pady=(0, 10))
-        control_frame.pack_propagate(False)
-
-        # 按钮样式
-        btn_config = {
-            'font': ('Arial', 11, 'bold'),
-            'width': 12,
-            'height': 2
-        }
-
-        # 开始/重新开始按钮
-        self.start_btn = tk.Button(
-            control_frame,
-            text="🎮 开始游戏",
-            bg='#5CB85C',
-            fg='white',
-            command=self._show_mode_selection,
-            **btn_config
-        )
-        self.start_btn.pack(side=tk.LEFT, padx=5)
-
-        # 暂停/继续按钮
-        self.pause_btn = tk.Button(
-            control_frame,
-            text="⏸ 暂停",
-            bg='#F0AD4E',
-            fg='white',
-            command=self._toggle_pause,
-            state=tk.DISABLED,
-            **btn_config
-        )
-        self.pause_btn.pack(side=tk.LEFT, padx=5)
-
-        # 返回按钮
-        back_btn = tk.Button(
-            control_frame,
-            text="🏠 返回主菜单",
-            bg='#D9534F',
-            fg='white',
-            command=self._on_closing,
-            **btn_config
-        )
-        back_btn.pack(side=tk.RIGHT, padx=5)
-
-    def _create_item_panel(self, parent=None):
-        """创建道具栏"""
-        parent = parent or self.window
-        item_frame = tk.Frame(parent, bg='#2C3E50', height=90, bd=1, relief=tk.SUNKEN)
-        item_frame.pack(fill=tk.X, padx=16, pady=(0, 10))
-        item_frame.pack_propagate(False)
-
-        tk.Label(
-            item_frame,
-            text="🎒 道具栏",
-            font=('Arial', 12, 'bold'),
-            bg='#2C3E50',
-            fg='white'
-        ).pack(pady=(6, 2))
-
-        items_container = tk.Frame(item_frame, bg='#2C3E50')
-        items_container.pack(fill=tk.X, padx=10)
-
-        # 动态创建道具按钮
+    def _create_item_buttons(self, parent):
         self.item_buttons = {}
-        item_btn_config = {
-            'font': ('Arial', 10),
-            'width': 15,
-            'bg': '#4A90E2',
-            'fg': 'white'
-        }
-
         for item_id, item in ItemConfig.ITEMS.items():
-            btn = tk.Button(
-                items_container,
-                text=f"{item.get('icon','')} {item.get('name','')} (0)",
-                command=lambda i=item_id: self._use_item(i),
-                state=tk.DISABLED,
-                **item_btn_config
-            )
-            btn.pack(side=tk.LEFT, padx=5)
+            count = self.player.get_item_count(item_id)
+            btn = ItemButton(parent, item_id, item['icon'], item['name'], count, 
+                             command=self._use_item, width=90, height=80)
+            btn.pack(side=tk.LEFT, padx=15)
             self.item_buttons[item_id] = btn
 
-        # 更新道具数量显示
-        self._update_item_display()
-
+    # --- 核心修改：模式选择弹窗 ---
     def _show_mode_selection(self):
-        """显示模式选择对话框"""
-        selection_window = tk.Toplevel(self.window)
-        selection_window.title("选择游戏模式")
-        selection_window.geometry("400x300")
-        selection_window.resizable(False, False)
-        selection_window.transient(self.window)
-        selection_window.grab_set()
-
-        # 居中显示
-        selection_window.update_idletasks()
-        x = self.window.winfo_x() + (self.window.winfo_width() - 400) // 2
-        y = self.window.winfo_y() + (self.window.winfo_height() - 300) // 2
-        selection_window.geometry(f"400x300+{x}+{y}")
-
-        tk.Label(
-            selection_window,
-            text="选择游戏模式",
-            font=('Arial', 18, 'bold'),
-            fg='#34495E'
-        ).pack(pady=20)
-
-        # 普通模式按钮
-        normal_btn = tk.Button(
-            selection_window,
-            text="🎮 普通模式\n4x4 网格 | 无时间限制\n奖励: 200积分",
-            font=('Arial', 12, 'bold'),
-            bg='#5CB85C',
-            fg='white',
-            width=25,
-            height=4,
-            command=lambda: self._start_game('normal', selection_window)
-        )
-        normal_btn.pack(pady=10)
-
-        # 终极模式按钮
-        ultimate_btn = tk.Button(
-            selection_window,
-            text="⚡ 终极挑战\n6x6 网格 | 8分钟限时\n奖励: 1200积分",
-            font=('Arial', 12, 'bold'),
-            bg='#D9534F',
-            fg='white',
-            width=25,
-            height=4,
-            command=lambda: self._start_game('ultimate', selection_window)
-        )
-        ultimate_btn.pack(pady=10)
-
-    def _start_game(self, mode, selection_window):
         """
-        开始游戏
-        :param mode: 游戏模式
-        :param selection_window: 模式选择窗口
+        v4.2 清新风格模式选择弹窗
         """
-        selection_window.destroy()
+        win = tk.Toplevel(self.window)
+        win.title("模式选择")
+        win.geometry("500x400") # 稍微宽一点，舒适
+        win.config(bg='#E0F7FA') # 统一背景
+        win.transient(self.window)
+        win.grab_set()
+        
+        # 居中
+        self.window.update_idletasks()
+        x = self.window.winfo_x() + (self.window.winfo_width() - 500) // 2
+        y = self.window.winfo_y() + (self.window.winfo_height() - 400) // 2
+        win.geometry(f"+{x}+{y}")
+        
+        # 画布背景 + 标题
+        canvas = tk.Canvas(win, bg='#E0F7FA', highlightthickness=0, bd=0)
+        canvas.place(x=0, y=0, relwidth=1, relheight=1)
+        
+        # 1. 背景装饰 (淡黄/淡青圆圈)
+        canvas.create_oval(-50, -50, 150, 150, fill='#B2DFDB', outline="")
+        canvas.create_oval(400, 300, 550, 450, fill='#F0F4C3', outline="")
+        
+        # 2. 标题：模式选择 (细白边 + 深青色填充)
+        center_x = 250
+        y_pos = 80
+        title = "模式选择"
+        font = ("Arial Rounded MT Bold", 32, "bold")
+        
+        for dx, dy in [(-1,-1), (-1,1), (1,-1), (1,1)]:
+            canvas.create_text(center_x+dx, y_pos+dy, text=title, font=font, fill='white')
+        canvas.create_text(center_x, y_pos, text=title, font=font, fill='#00796B')
+        
+        # 3. 副标题
+        canvas.create_text(center_x, y_pos + 50, text="准备好挑战记忆力了吗？", 
+                           font=("Arial", 12), fill='#546E7A')
 
-        # 停止之前的更新任务
-        if self.update_task:
-            self.window.after_cancel(self.update_task)
+        # 4. 按钮区域 (使用 place 居中)
+        def start(mode):
+            win.destroy()
+            self._start_game(mode)
+        
+        # 按钮容器
+        btn_frame = tk.Frame(win, bg='#E0F7FA')
+        btn_frame.place(relx=0.5, rely=0.65, anchor=tk.CENTER)
+        
+        # 普通模式 (黄色 - 轻松)
+        ModeButton(btn_frame, text="普通模式", sub_text="4x4 网格 | 轻松休闲",
+                   theme='yellow', command=lambda: start('normal')).pack(pady=10)
+        
+        # 终极挑战 (淡红 - 挑战)
+        ModeButton(btn_frame, text="终极挑战", sub_text="6x6 网格 | 限时挑战",
+                   theme='red', command=lambda: start('ultimate')).pack(pady=10)
 
-        # 创建新游戏
+    def _start_game(self, mode):
         self.game = Game(mode=mode, player=self.player)
         self.game.start_game()
-
-        # 更新UI
-        mode_text = "普通模式 (4x4)" if mode == 'normal' else "终极挑战 (6x6 逻辑 / 9x4 显示)"
-        self.mode_label.config(text=f"模式: {mode_text}")
-
-        # 根据模式调整窗口尺寸并居中（终极模式更大以容纳 6x6 卡片）
-        try:
-            if mode == 'normal':
-                self.window.geometry("1000x800")
-            else:
-                self.window.geometry("1280x960")
-            self._center_window()
-        except Exception:
-            pass
-
-        # 创建卡牌网格
+        if mode == 'ultimate': self.window.geometry("1200x800")
+        else: self.window.geometry("1000x750")
         self._create_card_grid()
-        try:
-            self.window.after(50, self._recenter_grid)
-        except Exception:
-            pass
-
-        # 启用控制按钮
-        self.start_btn.config(text="🔄 重新开始")
-        self.pause_btn.config(state=tk.NORMAL)
-
-        # 更新道具按钮状态
-        self._update_item_display()
-
-        # 开始更新循环
-        self._update_game_state()
+        self._update_loop()
 
     def _create_card_grid(self):
-        """创建卡牌网格"""
-        # 清空之前的卡牌区域
-        for widget in self.game_frame.winfo_children():
-            widget.destroy()
-
+        for widget in self.game_frame.winfo_children(): widget.destroy()
         self.card_buttons = []
+        rows, cols = self._get_grid_dims()
+        
+        grid_container = tk.Frame(self.game_frame, bg=UIConfig.COLORS['primary'])
+        grid_container.place(relx=0.5, rely=0.5, anchor=tk.CENTER)
+        
+        total_cards = len(self.game.cards)
+        for i in range(total_cards):
+            r, c = i // cols, i % cols
+            card = PlayingCard(grid_container, width=85, height=120, corner_radius=12,
+                               command=lambda idx=i: self._on_card_click(idx))
+            card.grid(row=r, column=c, padx=8, pady=8)
+            self.card_buttons.append(card)
 
-        rows, cols = self._get_display_grid_dimensions()
+    def _get_grid_dims(self):
+        if self.game.mode == 'ultimate': return 4, 9
+        return 4, 4
 
-        # 自适应画布尺寸，确保网格居中且全部可见
-        padding = 14 if cols <= 4 and rows <= 4 else 6
-        ratio = 1.42
+    def _on_card_click(self, idx):
+        if not self.game or self.game.is_paused or self.animating: return
+        card = self.game.get_card_by_index(idx)
+        if not card or card.is_matched or card.is_flipped: return
+        self.game.flip_card(idx)
+        r, s = card.value
+        self.card_buttons[idx].animate_flip_to_front(r, s)
+        if len(self.game.flipped_cards) == 2:
+            self.animating = True
+            self.window.after(GameConfig.MATCH_DELAY, self._check_match)
 
-        # 创建带纹理的背景 Canvas
-        bg_canvas = tk.Canvas(self.game_frame, bg=UIConfig.COLORS.get('primary', '#4ECDC4'), highlightthickness=0)
-        bg_canvas.pack(fill=tk.BOTH, expand=True, padx=16, pady=12)
-
-        # 绘制简易纹理
-        try:
-            bg_canvas.update_idletasks()
-            self._draw_grid_pattern(bg_canvas)
-        except Exception:
-            pass
-
-        bg_canvas.update_idletasks()
-        # 计算卡片尺寸（根据画布自适应）与居中偏移
-        canvas_w = bg_canvas.winfo_width()
-        canvas_h = bg_canvas.winfo_height()
-        max_w_per_card = (canvas_w - (cols + 1) * padding) / cols
-        max_h_per_card = (canvas_h - (rows + 1) * padding) / rows
-        card_w = int(min(max_w_per_card, max_h_per_card / ratio))
-        if card_w < 58:
-            card_w = 58
-        card_h = int(card_w * ratio)
-
-        total_w = cols * card_w + (cols + 1) * padding
-        total_h = rows * card_h + (rows + 1) * padding
-        start_x = max(0, (canvas_w - total_w) // 2)
-        start_y = max(0, (canvas_h - total_h) // 2)
-
-        total_cards = len(getattr(self.game, 'cards', []))
-        for card_index in range(total_cards):
-            row = card_index // cols
-            col = card_index % cols
-            x = start_x + padding + col * (card_w + padding)
-            y = start_y + padding + row * (card_h + padding)
-
-            pc = PlayingCard(bg_canvas, width=card_w, height=card_h, corner_radius=14,
-                              command=lambda idx=card_index: self._on_card_click(idx))
-            try:
-                pc._render_back()
-            except Exception:
-                pass
-
-            # place on canvas
-            bg_canvas.create_window(x, y, window=pc, anchor=tk.NW)
-            self.card_buttons.append(pc)
-
-        self._grid_canvas = bg_canvas
-
-    def _get_display_grid_dimensions(self):
-        """根据当前模式返回展示用的行列数"""
-        if not self.game:
-            return 4, 4
-        if self.game.mode == 'ultimate':
-            rows, cols = 4, 9
-        else:
-            size = self.game.grid_size or 4
-            rows = cols = size
-        total_cards = len(getattr(self.game, 'cards', []))
-        if total_cards and rows * cols != total_cards:
-            side = int(total_cards ** 0.5)
-            if side * side == total_cards:
-                rows = cols = side
-            else:
-                rows = min(rows, total_cards)
-                cols = max(1, (total_cards + rows - 1) // rows)
-        return rows, cols
-
-    def _recenter_grid(self):
-        try:
-            if getattr(self, '_grid_canvas', None):
-                self._create_card_grid()
-        except Exception:
-            pass
-
-    def _on_card_click(self, card_index):
-        """
-        卡牌点击事件
-        :param card_index: 卡牌索引
-        """
-        if not self.game or self.game.is_paused:
-            return
-
-        if self.animating:
-            return
-
-        # 检查是否可以翻牌
-        card = self.game.get_card_by_index(card_index)
-        if not card or not card.can_flip():
-            return
-
-        if self.game.flip_card(card_index):
-            self._update_card_display(card_index)
-
-            if len(self.game.flipped_cards) == 2:
-                self.animating = True
-                self.pending_resolution_task = self.window.after(600, self._handle_match_result)
-
-    def _handle_match_result(self):
-        """处理配对结果"""
-        if not self.game:
-            return
-
-        # 检查是否匹配
-        if self.pending_resolution_task:
-            self.pending_resolution_task = None
+    def _check_match(self):
         pair, matched = self.game.get_last_pair()
         if pair:
             idx1, idx2 = pair
+            btn1, btn2 = self.card_buttons[idx1], self.card_buttons[idx2]
             if matched:
-                self._hide_matched_cards([idx1, idx2])
-            self.game.resolve_current_pair()
-            self._update_card_display(idx1)
-            self._update_card_display(idx2)
-
-        self.animating = False
-        self.pending_mismatch = False
-
-        # 检查游戏是否完成
-        if self.game.is_completed:
-            self._on_game_complete()
-        elif self.game.is_failed:
-            self._on_game_failed()
-
-    def _update_card_display(self, card_index):
-        """
-        更新卡牌显示
-        :param card_index: 卡牌索引
-        """
-        if card_index >= len(self.card_buttons):
-            return
-
-        card = self.game.get_card_by_index(card_index)
-        btn = self.card_buttons[card_index]
-        # 如果该位置已经被标记为匹配占位，直接返回，防止后续状态覆盖样式
-        try:
-            if getattr(btn, '_matched_placeholder', False):
-                return
-        except Exception:
-            pass
-
-        # 如果该卡牌已配对，锁定为正面并禁用交互
-        try:
-            if card.is_matched:
-                self._lock_matched_card(card_index)
-                return
-        except Exception:
-            pass
-
-        # 其他状态处理继续（已在上方处理匹配状态）
-
-        if card.is_flipped:
-            try:
-                rank, suit = card.value if isinstance(card.value, (tuple, list)) else (str(card.value), '')
-                if hasattr(btn, 'show_front'):
-                    btn.show_front(rank, suit)
-                else:
-                    btn.config(text=str(card.value))
-            except Exception:
-                btn.config(text=str(card.value))
-            return
-
-        if card.is_revealed:
-            try:
-                rank, suit = card.value if isinstance(card.value, (tuple, list)) else (str(card.value), '')
-                if hasattr(btn, 'show_front'):
-                    btn.show_front(rank, suit)
-                else:
-                    btn.config(text=str(card.value))
-            except Exception:
-                btn.config(text=str(card.value))
-            return
-
-        try:
-            if hasattr(btn, 'show_back'):
-                btn.show_back()
+                self.game.resolve_current_pair()
+                btn1.animate_vanish()
+                btn2.animate_vanish()
             else:
-                btn.config(text='?')
-        except Exception:
-            btn.config(text='?')
+                self.game.resolve_current_pair()
+                btn1.show_back()
+                btn2.show_back()
+        self.animating = False
+        if self.game.is_completed: self.window.after(500, self._on_game_complete)
 
-    def _hide_matched_card(self, card_index):
-        """兼容旧逻辑：保留为锁定正面"""
-        if card_index >= len(self.card_buttons):
-            return
-
-        btn = self.card_buttons[card_index]
-        try:
-            card = self.game.get_card_by_index(card_index)
-            rank, suit = card.value if isinstance(card.value, (tuple, list)) else (str(card.value), '')
-            if hasattr(btn, 'show_front'):
-                btn.show_front(rank, suit)
-            btn.config(state=tk.DISABLED)
-            try:
-                btn._matched_placeholder = True
-            except Exception:
-                pass
-            try:
-                self.window.update_idletasks()
-            except Exception:
-                pass
-        except Exception:
-            pass
-
-    def _hide_matched_cards(self, indices):
-        """一次性锁定多张已配对卡牌为正面并刷新界面"""
-        try:
-            for card_index in indices:
-                if 0 <= card_index < len(self.card_buttons):
-                    btn = self.card_buttons[card_index]
-                    try:
-                        card = self.game.get_card_by_index(card_index)
-                        rank, suit = card.value if isinstance(card.value, (tuple, list)) else (str(card.value), '')
-                        if hasattr(btn, 'show_front'):
-                            btn.show_front(rank, suit)
-                        btn.config(state=tk.DISABLED)
-                    except Exception:
-                        pass
-                    try:
-                        btn._matched_placeholder = True
-                    except Exception:
-                        pass
-            # 立即刷新 UI
-            try:
-                self.window.update_idletasks()
-            except Exception:
-                pass
-        except Exception:
-            pass
-
-    def _lock_matched_card(self, card_index):
-        """把单张已配对卡牌锁定为正面并禁用交互"""
-        try:
-            if 0 <= card_index < len(self.card_buttons):
-                widget = self.card_buttons[card_index]
-                card = self.game.get_card_by_index(card_index)
-                rank, suit = card.value if isinstance(card.value, (tuple, list)) else (str(card.value), '')
-                if hasattr(widget, 'show_front'):
-                    widget.show_front(rank, suit)
-                widget.config(state=tk.DISABLED)
-                try:
-                    widget._matched_placeholder = True
-                except Exception:
-                    pass
-        except Exception:
-            pass
-
-    def _update_game_state(self):
-        """更新游戏状态（定时调用）"""
-        if not self.game or not self.game.is_started:
-            return
-
-        # 如果游戏在外部被标记为完成或失败，优先处理结束逻辑
-        if self.game.is_completed:
-            # 在主线程中调度完成回调，保证 UI 更新
-            try:
-                self._on_game_complete()
-            except Exception:
-                pass
-            return
-        if self.game.is_failed:
-            try:
-                self._on_game_failed()
-            except Exception:
-                pass
-            return
-
-        # 更新时间
-        self.time_label.config(text=f"⏱ {self.game.timer.get_time_display()}")
-
-        # 更新步数
-        self.moves_label.config(text=f"🔄 步数: {self.game.moves}")
-
-        # 更新配对数
-        self.pairs_label.config(
-            text=f"✓ 配对: {self.game.matched_pairs}/{self.game.get_total_pairs()}"
-        )
-
-        # 更新进度
-        self.progress_var.set(int(self.game.get_progress()))
-
-        # 更新积分显示
-        self.points_label.config(text=f"💰 积分: {self.player.points}")
-
-        # 检查超时
-        if self.game.timer.is_time_up() and not self.game.is_completed:
-            self.game.fail_game()
-            self._on_game_failed()
-            return
-
-        # 继续更新
-        if not self.game.is_paused and not self.game.is_completed:
-            self.update_task = self.window.after(100, self._update_game_state)
-
-    def _toggle_pause(self):
-        """暂停/继续游戏"""
-        if not self.game:
-            return
-
-        if self.game.is_paused:
-            self.game.resume_game()
-            self.pause_btn.config(text="⏸ 暂停")
-            self._update_game_state()
-        else:
-            self.game.pause_game()
-            self.pause_btn.config(text="▶ 继续")
-
-    def _use_hint(self):
-        """使用提示道具"""
-        if not self.game or not self.player.has_item('hint'):
-            messagebox.showwarning("提示", "没有提示道具！\n请前往商城购买。")
-            return
-
-        if self.game.use_hint():
-            # 更新卡牌显示
-            for idx in self.game.hint_cards:
-                self._update_card_display(idx)
-
-            # 3秒后隐藏提示
-            self.window.after(3000, self._hide_hint)
-
-            # 更新道具显示
-            self._update_item_display()
-
-            # 持久化玩家道具变化
-            try:
-                save_player(self.player)
-            except Exception:
-                pass
-
-    def _hide_hint(self):
-        """隐藏提示"""
-        if self.game:
-            hint_cards = self.game.hint_cards.copy()
-            self.game.hide_hint()
-            for idx in hint_cards:
-                self._update_card_display(idx)
-
-    def _use_time_extend(self):
-        """使用延时道具"""
-        if not self.game or not self.player.has_item('time_extend'):
-            messagebox.showwarning("提示", "没有延时道具！\n请前往商城购买。")
-            return
-
-        if self.game.extend_time(30):
-            messagebox.showinfo("成功", "⏰ 时间延长30秒！")
-            self._update_item_display()
-            try:
-                save_player(self.player)
-            except Exception:
-                pass
-        else:
-            messagebox.showinfo("提示", "当前模式无时间限制")
-
-    def _use_undo(self):
-        """使用撤销道具"""
-        if not self.game or not self.player.has_item('undo'):
-            messagebox.showwarning("提示", "没有撤销道具！\n请前往商城购买。")
-            return
-
-        if self.game.undo_move():
-            # 更新所有卡牌显示
-            for i in range(len(self.card_buttons)):
-                self._update_card_display(i)
-
-            messagebox.showinfo("成功", "↩️ 已撤销上一步操作！")
-            self._update_item_display()
-            try:
-                save_player(self.player)
-            except Exception:
-                pass
-        else:
-            messagebox.showinfo("提示", "没有可撤销的操作")
-
-    def _update_item_display(self):
-        """更新道具显示（动态根据 ItemConfig）"""
-        # 如果没有动态按钮（兼容旧逻辑），直接返回
-        if not hasattr(self, 'item_buttons') or not self.item_buttons:
-            return
-
-        for item_id, btn in self.item_buttons.items():
-            item = ItemConfig.ITEMS.get(item_id, {})
-            icon = item.get('icon', '')
-            name = item.get('name', item_id)
-            count = self.player.get_item_count(item_id)
-
-            btn.config(text=f"{icon} {name} ({count})")
-
-            # 只有在游戏进行中且拥有数量时才可用
-            usable = (count > 0 and self.game and getattr(self.game, 'is_started', False))
-            btn.config(state=tk.NORMAL if usable else tk.DISABLED)
-
-        return
-
-    def _use_item(self, item_id):
-        """通用道具使用路由：根据 item_id 调用对应方法"""
-        if item_id == 'hint':
-            self._use_hint()
-            return
-
-        if item_id == 'time_extend':
-            self._use_time_extend()
-            return
-
-        if item_id == 'undo':
-            self._use_undo()
-            return
-
-        # 其他道具（如果尚未实现）给出提示
-        messagebox.showinfo("提示", f"当前道具暂未实现：{item_id}")
-
-    def _on_player_change(self):
-        """玩家数据变化回调（由 Player 调用），在主线程调度 UI 刷新。"""
-        try:
-            if hasattr(self, 'window') and self.window:
-                self.window.after(0, self._update_item_display)
-        except Exception:
-            pass
+    def _update_loop(self):
+        if not self.game or self._end_handled: return
+        time_str = self.game.timer.get_time_display()
+        self.time_label.config(text=f"⏱ {time_str}")
+        self.score_label.config(text=f"得分: {self.player.points}")
+        if self.game.timer.is_time_up(): self._on_game_failed()
+        else: self.update_task = self.window.after(100, self._update_loop)
 
     def _on_game_complete(self):
-        """游戏完成"""
-        # 防止重复处理（由不同路径重复触发）
-        if getattr(self, '_end_handled', False):
-            return
+        if self._end_handled: return
         self._end_handled = True
-
-        # 停止定时刷新任务，防止再次触发结束逻辑
-        if self.update_task:
-            try:
-                self.window.after_cancel(self.update_task)
-            except Exception:
-                pass
-
-        self.pause_btn.config(state=tk.DISABLED)
-
-        # 显示结果
-        result_text = f"""
-🎉 恭喜通关！
-
-⏱ 用时: {self.game.timer.format_time(self.game.timer.get_elapsed_time())}
-🔄 步数: {self.game.moves}
-❌ 失误: {self.game.mistakes}
-💯 得分: {self.game.score}
-
-🎁 获得积分: {self.game._calculate_reward(int(self.game.timer.get_elapsed_time()))}
-        """
-
-        messagebox.showinfo("完成", result_text)
-
-        # 更新积分显示
-        self.points_label.config(text=f"💰 积分: {self.player.points}")
-
-        # 结束游戏后关闭并销毁本窗口
-        try:
-            self._on_closing()
-        except Exception:
-            pass
+        messagebox.showinfo("恭喜", f"通关成功！\n获得积分: {self.game._calculate_reward(0)}")
+        self.on_close() if self.on_close else self.window.destroy()
 
     def _on_game_failed(self):
-        """游戏失败"""
-        # 防止重复处理（由不同路径重复触发）
-        if getattr(self, '_end_handled', False):
-            return
+        if self._end_handled: return
         self._end_handled = True
-
-        # 停止定时刷新任务，防止再次触发结束逻辑
-        if self.update_task:
-            try:
-                self.window.after_cancel(self.update_task)
-            except Exception:
-                pass
-
-        self.pause_btn.config(state=tk.DISABLED)
-
-        messagebox.showwarning(
-            "失败",
-            f"⏰ 时间到！\n\n已完成: {self.game.matched_pairs}/{self.game.get_total_pairs()}"
-        )
-
-        # 失败后也关闭游戏窗口
-        try:
-            self._on_closing()
-        except Exception:
-            pass
+        messagebox.showinfo("遗憾", "时间到了，挑战失败！")
+        self.on_close() if self.on_close else self.window.destroy()
 
     def _on_closing(self):
-        """窗口关闭"""
-        if self.update_task:
-            self.window.after_cancel(self.update_task)
-        # 移除玩家监听器
+        if self.update_task: self.window.after_cancel(self.update_task)
         if hasattr(self.player, 'remove_change_listener'):
-            try:
-                self.player.remove_change_listener(self._on_player_change)
-            except Exception:
-                pass
+            try: self.player.remove_change_listener(self._on_player_change)
+            except: pass
         self.window.destroy()
+        if self.on_close: self.on_close()
 
-        if self.on_close:
-            self.on_close()
+    def _on_player_change(self):
+        self.window.after(0, self._update_item_display)
 
+    def _update_item_display(self):
+        for item_id, btn in self.item_buttons.items():
+            btn.set_count(self.player.get_item_count(item_id))
 
-# ============== 测试代码 ==============
-if __name__ == '__main__':
-    from core.player import Player
+    def _use_item(self, item_id):
+        if not self.game or not self.game.is_started: return
+        if self.player.get_item_count(item_id) <= 0: return
+        if item_id == 'hint':
+            self.game.use_hint()
+            for idx in self.game.hint_cards:
+                r, s = self.game.cards[idx].value
+                self.card_buttons[idx].show_front(r, s)
+            self.window.after(1000, lambda: self._restore_hint())
+        elif item_id == 'time_extend':
+            self.game.extend_time(30)
+            messagebox.showinfo("道具", "时间延长 30 秒！")
+        elif item_id == 'shuffle_prevent': messagebox.showinfo("道具", "定身术已使用！")
+        elif item_id == 'undo': messagebox.showinfo("道具", "时光倒流已使用！")
+        self.player.use_item(item_id)
+        save_player(self.player)
 
-    root = tk.Tk()
-    root.withdraw()
-
-    # 创建测试玩家
-    player = Player("TestPlayer")
-    player.add_item('hint', 5)
-    player.add_item('time_extend', 3)
-    player.add_item('undo', 2)
-
-    def on_close():
-        root.quit()
-
-    game_window = GameWindow(root, player, on_close)
-    root.mainloop()
+    def _restore_hint(self):
+        for idx in self.game.hint_cards:
+            if not self.game.cards[idx].is_matched: self.card_buttons[idx].show_back()
+        self.game.hide_hint()

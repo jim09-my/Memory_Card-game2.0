@@ -1,223 +1,118 @@
 """
-历史记录窗口
+历史记录窗口 - v4.1 优化版
+优化：单行列表、减少留白、标题位置
 """
 
 import tkinter as tk
-from tkinter import ttk
+import math
 from datetime import datetime
-
+from config import UIConfig
 
 class HistoryWindow:
-    """历史记录窗口"""
-
     def __init__(self, master, player):
-        self.master = master
         self.player = player
-
         self.window = tk.Toplevel(master)
-        self.window.title("记忆翻牌游戏 - 历史记录")
-        self.window.geometry("780x600")
-        self.window.resizable(True, True)
+        self.window.title("我的战绩")
+        self.window.geometry("600x700")
+        self.window.config(bg='#E0F7FA')
         self.window.transient(master)
         self.window.grab_set()
-        # 居中窗口
-        try:
-            self.window.update_idletasks()
-            w = self.window.winfo_width() or 780
-            h = self.window.winfo_height() or 600
-            x = (self.window.winfo_screenwidth() // 2) - (w // 2)
-            y = (self.window.winfo_screenheight() // 2) - (h // 2)
-            self.window.geometry(f"{w}x{h}+{x}+{y}")
-        except Exception:
-            pass
+        self._center_window()
+        
+        self.bg_canvas = tk.Canvas(self.window, bg='#E0F7FA', highlightthickness=0, bd=0)
+        self.bg_canvas.place(x=0, y=0, relwidth=1, relheight=1)
+        self._draw_bg_decorations()
+        self._draw_title()
+        self._create_back_button()
+        self._create_history_list()
 
-        self.refresh_symbols = ['⟳', '⟲', '⟰', '⟱']
-        self.refresh_index = 0
-        self.is_refreshing = False
+    def _center_window(self):
+        self.window.update_idletasks()
+        w, h = 600, 700
+        x = (self.window.winfo_screenwidth() - w) // 2
+        y = (self.window.winfo_screenheight() - h) // 2
+        self.window.geometry(f"{w}x{h}+{x}+{y}")
 
-        self._create_widgets()
-        self._populate_summary()
-        self._populate_records()
-        # 监听玩家变化，实时刷新记录与统计
-        if hasattr(self.player, 'add_change_listener'):
-            try:
-                self.player.add_change_listener(self._on_player_change)
-            except Exception:
-                pass
+    def _draw_bg_decorations(self):
+        self.bg_canvas.create_oval(-80, 500, 150, 730, fill='#B2DFDB', outline="") 
+        self.bg_canvas.create_oval(500, -50, 650, 100, fill='#F0F4C3', outline="")
 
-        # 窗口关闭时清理监听器
-        self.window.protocol("WM_DELETE_WINDOW", self._on_close)
+    def _draw_title(self):
+        center_x = 300
+        # 修改1：标题下移 (50 -> 65)
+        y_pos = 65
+        text = "我的战绩"
+        font = ("Arial Rounded MT Bold", 32, "bold")
+        
+        for dx, dy in [(-1,-1), (-1,1), (1,-1), (1,1)]:
+            self.bg_canvas.create_text(center_x+dx, y_pos+dy, text=text, font=font, fill='white')
+        
+        self.bg_canvas.create_text(center_x, y_pos, text=text, font=font, fill='#B39DDB')
 
-    def _on_player_change(self):
-        try:
-            self.window.after(0, lambda: (self._populate_summary(), self._populate_records()))
-        except Exception:
-            pass
+    def _create_back_button(self):
+        btn = tk.Button(self.window, text="✖", command=self.window.destroy, 
+                        bg='#B2DFDB', fg='white', font=('Arial', 10, 'bold'),
+                        relief=tk.FLAT, bd=0)
+        btn.place(x=560, y=15, width=25, height=25)
 
-    def _on_close(self):
-        if hasattr(self.player, 'remove_change_listener'):
-            try:
-                self.player.remove_change_listener(self._on_player_change)
-            except Exception:
-                pass
-        self.window.destroy()
+    def _create_history_list(self):
+        container = tk.Frame(self.window, bg='#E0F7FA')
+        # 修改2：列表区域宽度增加 (540 -> 580)，高度调整
+        container.place(relx=0.5, rely=0.58, anchor=tk.CENTER, width=580, height=560)
+        
+        canvas = tk.Canvas(container, bg='#E0F7FA', highlightthickness=0)
+        scrollbar = tk.Scrollbar(container, orient="vertical", command=canvas.yview)
+        scrollable = tk.Frame(canvas, bg='#E0F7FA')
+        
+        # 让内部frame宽度自适应canvas
+        canvas.bind('<Configure>', lambda e: canvas.itemconfig('inner', width=e.width))
+        
+        scrollable.bind("<Configure>", lambda e: canvas.configure(scrollregion=canvas.bbox("all")))
+        canvas.create_window((0, 0), window=scrollable, anchor="nw", tags='inner')
+        canvas.configure(yscrollcommand=scrollbar.set)
+        
+        canvas.pack(side="left", fill="both", expand=True)
+        scrollbar.pack(side="right", fill="y")
 
-    # ------------------------------ UI ------------------------------
-    def _create_widgets(self):
-        header = tk.Frame(self.window, bg='#34495E', height=100, padx=20)
-        header.pack(fill=tk.X)
-        header.pack_propagate(False)
-
-        tk.Label(
-            header,
-            text="📊 游戏历史记录",
-            font=('Arial', 24, 'bold'),
-            bg='#34495E',
-            fg='white'
-        ).pack(anchor=tk.W, pady=(15, 0))
-
-        controls = tk.Frame(header, bg='#34495E')
-        controls.pack(fill=tk.X, pady=(5, 0))
-
-        self.refresh_btn = tk.Button(
-            controls,
-            text="🔄 刷新记录",
-            font=('Arial', 12, 'bold'),
-            command=self._handle_refresh
-        )
-        self.refresh_btn.pack(side=tk.RIGHT)
-
-        summary = tk.Frame(self.window, padx=20, pady=10)
-        summary.pack(fill=tk.X)
-        self.summary_frame = summary
-
-        # 记录表格
-        table_frame = tk.Frame(self.window, padx=20, pady=10)
-        table_frame.pack(fill=tk.BOTH, expand=True)
-
-        columns = ('mode', 'result', 'time', 'moves', 'reward', 'date')
-        self.tree = ttk.Treeview(
-            table_frame,
-            columns=columns,
-            show='headings',
-            height=15
-        )
-
-        headings = {
-            'mode': '模式',
-            'result': '结果',
-            'time': '用时',
-            'moves': '步数',
-            'reward': '奖励',
-            'date': '时间'
-        }
-        widths = [80, 80, 100, 80, 80, 180]
-
-        for col, width in zip(columns, widths):
-            self.tree.heading(col, text=headings[col])
-            self.tree.column(col, width=width, anchor=tk.CENTER)
-
-        scrollbar = ttk.Scrollbar(table_frame, orient=tk.VERTICAL, command=self.tree.yview)
-        self.tree.configure(yscroll=scrollbar.set)
-        self.tree.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
-        scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
-
-    # ------------------------------ 数据填充 ------------------------------
-    def _populate_summary(self):
-        for widget in self.summary_frame.winfo_children():
-            widget.destroy()
-
-        stats = self.player.get_statistics()
-        cards = [
-            ("总场次", stats['total_games']),
-            ("完成场次", stats['completed_games']),
-            ("胜率", f"{stats['win_rate']:.1f}%"),
-            ("普通最佳", self._format_time(stats['best_time_normal'])),
-            ("终极最佳", self._format_time(stats['best_time_ultimate'])),
-            ("平均用时", self._format_time(stats['average_time']))
-        ]
-
-        for title, value in cards:
-            box = tk.Frame(self.summary_frame, bd=1, relief=tk.GROOVE, padx=15, pady=10)
-            box.pack(side=tk.LEFT, padx=6, expand=True, fill=tk.X)
-            tk.Label(box, text=title, font=('Arial', 11), fg='#7F8C8D').pack()
-            tk.Label(box, text=value, font=('Arial', 16, 'bold')).pack()
-
-    def _populate_records(self):
-        # 清空
-        for row in self.tree.get_children():
-            self.tree.delete(row)
-
-        records = sorted(
-            self.player.game_records,
-            key=lambda r: r.get('timestamp', 0),
-            reverse=True
-        )[:50]
-
-        for record in records:
-            mode = "普通" if record.get('mode') == 'normal' else "终极"
-            result = "通关" if record.get('completed') else "失败"
-            time_used = self._format_time(record.get('time_used'))
-            moves = record.get('moves', '-')
-            reward = record.get('reward', 0)
-            date = datetime.fromtimestamp(record.get('timestamp', 0)).strftime('%Y-%m-%d %H:%M')
-
-            self.tree.insert('', tk.END, values=(mode, result, time_used, moves, reward, date))
-
-    # ------------------------------ 刷新逻辑 ------------------------------
-    def _handle_refresh(self):
-        if self.is_refreshing:
-            return
-        self.is_refreshing = True
-        self.refresh_btn.config(state=tk.DISABLED)
-        self._animate_refresh()
-        self.window.after(700, self._finish_refresh)
-
-    def _animate_refresh(self):
-        if not self.is_refreshing:
-            self.refresh_btn.config(text="🔄 刷新记录")
+        records = sorted(self.player.game_records, key=lambda r: r.get('timestamp', 0), reverse=True)
+        
+        if not records:
+            tk.Label(scrollable, text="暂无战绩", font=('Arial', 14), bg='#E0F7FA', fg='#90A4AE').pack(pady=50)
             return
 
-        symbol = self.refresh_symbols[self.refresh_index % len(self.refresh_symbols)]
-        self.refresh_btn.config(text=f"{symbol} 刷新中")
-        self.refresh_index += 1
-        self.window.after(120, self._animate_refresh)
+        for r in records:
+            self._draw_one_line_row(scrollable, r)
 
-    def _finish_refresh(self):
-        self._populate_summary()
-        self._populate_records()
-        self.is_refreshing = False
-        self.refresh_btn.config(state=tk.NORMAL, text="🔄 刷新记录")
+    def _draw_one_line_row(self, parent, record):
+        # 修改3：单行布局，长条形
+        is_win = record.get('completed', False)
+        bg_col = '#F1F8E9' if is_win else '#FFEBEE'
+        
+        # 长条形 Frame
+        row = tk.Frame(parent, bg=bg_col, pady=10, padx=10)
+        row.pack(fill=tk.X, pady=10, padx=50) # 极小的左右边距
+        
+        # 1. 图标
+        icon = "🏆" if is_win else "❌"
+        tk.Label(row, text=icon, font=('Segoe UI Emoji', 12), bg=bg_col, width=3).pack(side=tk.LEFT)
+        
+        # 2. 模式
+        mode = "普通" if record.get('mode') == 'normal' else "终极"
+        tk.Label(row, text=mode, font=('Arial', 11, 'bold'), fg='#455A64', bg=bg_col, width=6, anchor='w').pack(side=tk.LEFT)
+        
+        # 3. 日期 (灰色小字)
+        date = datetime.fromtimestamp(record.get('timestamp', 0)).strftime('%m-%d %H:%M')
+        tk.Label(row, text=date, font=('Arial', 10), fg='#90A4AE', bg=bg_col).pack(side=tk.LEFT, padx=5)
+        
+        # 4. 用时 (靠右侧前)
+        time_s = self._fmt_time(record.get('time_used'))
+        tk.Label(row, text=f"⏱ {time_s}", font=('Arial', 10), fg='#78909C', bg=bg_col).pack(side=tk.LEFT, padx=10)
+        
+        # 5. 积分 (最右侧，加粗)
+        score = record.get('reward', 0)
+        score_col = '#FFA726' if score > 0 else '#9E9E9E'
+        tk.Label(row, text=f"+{score}", font=('Arial', 12, 'bold'), fg=score_col, bg=bg_col).pack(side=tk.RIGHT, padx=5)
 
-    # ------------------------------ 工具方法 ------------------------------
-    @staticmethod
-    def _format_time(seconds):
-        if not seconds and seconds != 0:
-            return "-"
-        minutes = int(seconds) // 60
-        secs = int(seconds) % 60
-        return f"{minutes:02d}:{secs:02d}"
-
-
-# ============== 测试代码 ==============
-if __name__ == '__main__':
-    from core.player import Player
-    import random
-    import time
-
-    root = tk.Tk()
-    root.withdraw()
-
-    p = Player("Tester")
-    for i in range(20):
-        p.add_game_record({
-            'mode': 'normal' if i % 2 == 0 else 'ultimate',
-            'completed': i % 3 != 0,
-            'time_used': random.randint(60, 300),
-            'moves': random.randint(15, 40),
-            'reward': random.randint(100, 500),
-            'timestamp': time.time() - i * 3600
-        })
-
-    HistoryWindow(root, p).window.mainloop()
-
+    def _fmt_time(self, s):
+        if not s: return "--"
+        return f"{int(s)}s"
