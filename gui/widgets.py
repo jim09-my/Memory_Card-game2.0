@@ -118,7 +118,8 @@ class PlayingCard(tk.Canvas):
         }
 
     def _draw_pips(self, positions, col, x_offset, y_offset, w, h, scale):
-        pip_font = (UIConfig.FONTS['card_corner'][0], max(10, int(h * 0.11 * scale)), 'bold')
+        # 将扑克牌花色图案放大（不改变卡牌整体大小/位置），以增强可读性
+        pip_font = (UIConfig.FONTS['card_corner'][0], max(10, int(h * 0.16 * scale)), 'bold')
         for x_rel, y_rel in positions:
             x = x_offset + w * x_rel
             y = y_offset + h * y_rel

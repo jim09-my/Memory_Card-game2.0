@@ -109,6 +109,9 @@ class GameWindow:
         self._shuffle_warning_animation = None  # 洗牌警告动画任务
         self._shuffle_flash_done = False       # 是否已完成本轮闪烁
         self._shuffle_flash_count = 0          # 本轮闪烁计数
+        # 统一的洗牌提示字体，确保闪烁前后样式一致
+        self._shuffle_warning_font = ('Arial Rounded MT Bold', 16, 'bold')
+        self._shuffle_side_font = ('Arial Rounded MT Bold', 12, 'bold')
         
         self._create_ui()
         
@@ -170,7 +173,7 @@ class GameWindow:
         self._shuffle_warning_label = tk.Label(
             self.game_frame,
             text="",
-            font=('Arial Rounded MT Bold', 16, 'bold'),
+            font=self._shuffle_warning_font,
             bg=UIConfig.COLORS['primary'],
             fg='#FF5252',
             pady=10
@@ -180,7 +183,7 @@ class GameWindow:
         self._shuffle_side_hint_label = tk.Label(
             self.game_frame,
             text="",
-            font=('Arial', 11),
+            font=self._shuffle_side_font,
             bg=UIConfig.COLORS['primary'],
             fg='#FFFDE7'  # 浅色字体，避免太抢眼
         )
@@ -693,7 +696,7 @@ class GameWindow:
             warning_text = f"⚠️ 警告：再失败 {remaining} 次将触发洗牌！"
             if self._shuffle_warning_label:
                 try:
-                    self._shuffle_warning_label.config(text=warning_text)
+                    self._shuffle_warning_label.config(text=warning_text, font=self._shuffle_warning_font)
                     self._shuffle_warning_label.place(relx=0.5, rely=0.1, anchor=tk.CENTER)
                 except Exception:
                     pass
@@ -703,12 +706,13 @@ class GameWindow:
                 self._shuffle_flash_count = 0
                 self._animate_shuffle_warning()
 
-            # 闪烁完成后，仅显示右侧竖排浅色提示文字
+            # 闪烁完成后，仅显示右侧竖排浅色提示文字（居中显示）
             if self._shuffle_flash_done and self._shuffle_side_hint_label:
                 try:
-                    vertical_text = "小\n提\n示\n：\n再\n失\n败\n一\n次\n将\n会\n重\n新\n洗\n牌\n，\n请\n注\n意\n记\n忆\n牌\n面\n位\n置~"
-                    self._shuffle_side_hint_label.config(text=vertical_text, justify=tk.LEFT)
-                    self._shuffle_side_hint_label.place(relx=0.98, rely=0.3, anchor=tk.E)
+                    vertical_text = "再\n失\n败\n一\n次\n将\n会\n重\n新\n洗\n牌\n，\n\n请\n注\n意\n记\n忆\n牌\n面\n位\n置"
+                    self._shuffle_side_hint_label.config(text=vertical_text, justify=tk.CENTER, anchor='center', font=self._shuffle_side_font)
+                    # 右侧居中显示（垂直居中）
+                    self._shuffle_side_hint_label.place(relx=0.98, rely=0.5, anchor=tk.E)
                 except Exception:
                     pass
         else:
@@ -740,45 +744,43 @@ class GameWindow:
             return
 
         try:
-            # 增加闪烁计数，限制本轮闪烁次数
-            self._shuffle_flash_count += 1
+            # 立即切换为提示色与背景（一次性闪烁）
+            try:
+                self._shuffle_warning_label.config(fg='#FF1744', font=self._shuffle_warning_font)
+            except Exception:
+                pass
 
-            # 获取当前颜色
-            current_color = self._shuffle_warning_label.cget('fg')
-
-            # 在红色和深红色之间切换
-            if current_color == '#FF5252':
-                new_color = '#FF1744'
-            else:
-                new_color = '#FF5252'
-
-            self._shuffle_warning_label.config(fg=new_color)
-
-            # 同时改变游戏区域背景色（红色闪烁效果）
             if hasattr(self, 'game_frame'):
-                current_bg = self.game_frame.cget('bg')
-                if current_bg == UIConfig.COLORS['primary']:
-                    self.game_frame.config(bg='#FFEBEE')  # 淡红色背景
-                else:
-                    self.game_frame.config(bg=UIConfig.COLORS['primary'])
-
-            # 如果闪烁次数未达到上限，继续动画；否则停止并标记完成
-            if self._shuffle_flash_count < 4:
-                self._shuffle_warning_animation = self.window.after(500, self._animate_shuffle_warning)
-            else:
-                # 结束本轮闪烁
-                self._shuffle_warning_animation = None
-                self._shuffle_flash_done = True
-                # 恢复背景为主色
-                if hasattr(self, 'game_frame'):
-                    self.game_frame.config(bg=UIConfig.COLORS['primary'])
-                # 隐藏中间大警告，具体侧边提示由 _update_shuffle_warning 控制
                 try:
-                    self._shuffle_warning_label.place_forget()
+                    self.game_frame.config(bg='#FFEBEE')
                 except Exception:
                     pass
+
+            # 在短延迟后恢复并标记闪烁完成，由内部函数完成恢复工作
+            def _end_flash():
+                try:
+                    try:
+                        self._shuffle_warning_label.config(fg='#FF5252', font=self._shuffle_warning_font)
+                    except Exception:
+                        pass
+                    if hasattr(self, 'game_frame'):
+                        try:
+                            self.game_frame.config(bg=UIConfig.COLORS['primary'])
+                        except Exception:
+                            pass
+                    # 隐藏中间大警告，侧边提示由 _update_shuffle_warning 接管显示
+                    try:
+                        self._shuffle_warning_label.place_forget()
+                    except Exception:
+                        pass
+                    self._shuffle_warning_animation = None
+                    self._shuffle_flash_done = True
+                except Exception:
+                    self._shuffle_warning_animation = None
+
+            # 安排一次性的恢复操作（500ms）
+            self._shuffle_warning_animation = self.window.after(500, _end_flash)
         except Exception:
-            # 如果标签或窗口已无效，停止动画，避免打断主循环
             self._shuffle_warning_animation = None
 
     def _render_cards_state(self):

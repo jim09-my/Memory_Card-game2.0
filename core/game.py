@@ -328,8 +328,9 @@ class Game:
         检查是否需要触发洗牌
         在9×4模式下，连续失败4次会触发洗牌
         """
-        # 洗牌触发阈值：4次连续失败（符合人的大脑规律）
-        SHUFFLE_THRESHOLD = 4
+        # 洗牌触发阈值：延迟触发为7次连续失败
+        # 只有在连续翻牌7次都没有匹配成功时才触发洗牌
+        SHUFFLE_THRESHOLD = 7
         
         # 如果防洗牌道具激活，不触发洗牌
         if self.shuffle_prevent_active:
@@ -362,7 +363,7 @@ class Game:
         if self.shuffle_prevent_active:
             print("🛡️ 防洗牌道具激活，洗牌被阻止")
             return False
-        
+
         # 获取未匹配的卡牌
         unmatched_cards = [card for card in self.cards if not card.is_matched]
 
@@ -390,37 +391,12 @@ class Game:
         print("🔀 卡牌已洗牌")
         return True
     
-    def activate_shuffle_prevent(self):
-        """
-        激活防洗牌道具
-        在洗牌模式下，防止下一次洗牌触发
-        """
-        if not self.shuffle_enabled:
-            print("当前模式未启用洗牌功能")
-            return False
-        
-        # 检查玩家是否有防洗牌道具
-        if self.player and not self.player.has_item('shuffle_prevent'):
-            print("没有防洗牌道具")
-            return False
-        
-        # 激活防洗牌
-        self.shuffle_prevent_active = True
-        
-        # 使用道具
-        if self.player:
-            self.player.use_item('shuffle_prevent')
-            self.items_used['shuffle_prevent'] += 1
-        
-        print("🛡️ 防洗牌道具已激活")
-        return True
-    
     def get_shuffle_warning(self):
         """
         获取洗牌警告状态
         返回：是否需要显示警告，以及剩余失败次数
         """
-        SHUFFLE_THRESHOLD = 4
+        SHUFFLE_THRESHOLD = 7
         if self.shuffle_enabled and self.consecutive_failures >= SHUFFLE_THRESHOLD - 1:
             remaining = SHUFFLE_THRESHOLD - self.consecutive_failures
             return True, remaining
