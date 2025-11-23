@@ -104,8 +104,11 @@ class GameWindow:
         self._time_freeze_task = None
         self._time_freeze_remaining = 0
         self._time_frozen = False
-        self._shuffle_warning_label = None  # 洗牌警告标签
+        self._shuffle_warning_label = None  # 洗牌警告标签（居中）
+        self._shuffle_side_hint_label = None  # 洗牌侧边浅色提示文字
         self._shuffle_warning_animation = None  # 洗牌警告动画任务
+        self._shuffle_flash_done = False       # 是否已完成本轮闪烁
+        self._shuffle_flash_count = 0          # 本轮闪烁计数
         
         self._create_ui()
         
@@ -171,6 +174,15 @@ class GameWindow:
             bg=UIConfig.COLORS['primary'],
             fg='#FF5252',
             pady=10
+        )
+
+        # 洗牌侧边浅色提示文字（初始隐藏）
+        self._shuffle_side_hint_label = tk.Label(
+            self.game_frame,
+            text="",
+            font=('Arial', 11),
+            bg=UIConfig.COLORS['primary'],
+            fg='#FFFDE7'  # 浅色字体，避免太抢眼
         )
         
         # 3. 底部道具
@@ -302,7 +314,11 @@ class GameWindow:
         self._update_loop()
 
     def _create_card_grid(self):
-        for widget in self.game_frame.winfo_children(): widget.destroy()
+        # 仅销毁卡牌网格相关控件，保留洗牌警告标签和侧边提示等其他UI元素
+        for widget in self.game_frame.winfo_children():
+            if widget is self._shuffle_warning_label or widget is self._shuffle_side_hint_label:
+                continue
+            widget.destroy()
         self.card_buttons = []
         rows, cols = self._get_grid_dims()
         
@@ -451,8 +467,16 @@ class GameWindow:
         
         # 更新时间显示
         time_str = f"冻结中 {self._time_freeze_remaining}s" if self._time_frozen else self.game.timer.get_time_display()
-        self.time_label.config(text=f"⏱ {time_str}")
-        self.score_label.config(text=f"⭐ 分数: {self.game.score}")
+        try:
+            self.time_label.config(text=f"⏱ {time_str}")
+        except Exception:
+            # 如果时间标签已被销毁，忽略异常，避免打断更新循环
+            pass
+        try:
+            self.score_label.config(text=f"⭐ 分数: {self.game.score}")
+        except Exception:
+            # 如果分数标签已被销毁，忽略异常，避免打断更新循环
+            pass
         
         # 检查洗牌警告
         self._update_shuffle_warning()
@@ -462,12 +486,39 @@ class GameWindow:
             self._on_game_failed()
             return
 
-        # 如果游戏对象标记了已洗牌状态，重建卡牌网格并重渲染，避免 PlayingCard 遗留的 _is_vanished 标记
+        # 如果游戏对象标记了已洗牌状态，重建卡牌网格并重渲染
+        # 注意：需要保持已经匹配并执行过“消失”的卡牌在洗牌后依然不可见
         try:
             if getattr(self.game, 'shuffle_status', None) == 'shuffled':
                 # 重新创建卡牌按钮（彻底重置控件状态）
                 self._create_card_grid()
+
+                # 对已经匹配完成的卡牌重新应用“消失”效果，避免它们在洗牌后重新出现
+                try:
+                    for i, card in enumerate(self.game.cards):
+                        if i >= len(self.card_buttons):
+                            break
+                        if getattr(card, 'is_matched', False):
+                            try:
+                                # 使用已有的 vanish 动画接口，让按钮保持隐藏状态
+                                self.card_buttons[i].animate_vanish()
+                            except Exception:
+                                # 如果动画不可用，至少禁用按钮，避免被点击
+                                try:
+                                    self.card_buttons[i].config(state='disabled')
+                                except Exception:
+                                    pass
+                except Exception:
+                    pass
+
+                # 然后根据当前游戏状态整体同步一次 UI
                 self._render_cards_state()
+
+                # 给玩家一个明确提示：已经发生洗牌
+                try:
+                    messagebox.showinfo("洗牌提示", "⚠️ 由于连续配对失败，牌局已重新洗牌，请重新观察牌面！")
+                except Exception:
+                    pass
                 # 清理标志
                 try:
                     delattr(self.game, 'shuffle_status')
@@ -570,9 +621,17 @@ class GameWindow:
                 messagebox.showinfo("道具", "🛡️ 防洗牌道具已激活！下次洗牌将被阻止。")
                 save_player(self.player)
         elif item_id == 'undo':
-            if self.game.undo_move():
-                self._render_cards_state()
-                messagebox.showinfo("道具", "时光倒流已使用！")
+            # 时间静止道具：仅在终极模式中可用，冻结时间10秒但允许正常翻牌配对
+            if self.game.mode not in ('ultimate', 'ultimate_shuffle'):
+                messagebox.showwarning("道具", "时间静止仅在终极模式中可用！")
+                return
+            if self._trigger_time_freeze(10):
+                # 消耗道具并记录使用次数
+                if self.player:
+                    self.player.use_item('undo')
+                if hasattr(self.game, 'items_used'):
+                    self.game.items_used['undo'] = self.game.items_used.get('undo', 0) + 1
+                messagebox.showinfo("道具", "⏸ 时间静止启动：10 秒内时间不流逝！")
         save_player(self.player)
 
     def _trigger_time_freeze(self, duration):
@@ -601,72 +660,139 @@ class GameWindow:
 
     def _update_shuffle_warning(self):
         """更新洗牌警告显示"""
+        # 不需要警告或游戏已结束时，隐藏所有相关 UI，并重置状态
         if not self.game or not self.game.shuffle_enabled or self.game.is_completed or self.game.is_failed:
             if self._shuffle_warning_label:
-                self._shuffle_warning_label.place_forget()
+                try:
+                    self._shuffle_warning_label.place_forget()
+                except Exception:
+                    pass
+            if self._shuffle_side_hint_label:
+                try:
+                    self._shuffle_side_hint_label.place_forget()
+                except Exception:
+                    pass
             if self._shuffle_warning_animation:
-                self.window.after_cancel(self._shuffle_warning_animation)
+                try:
+                    self.window.after_cancel(self._shuffle_warning_animation)
+                except Exception:
+                    pass
                 self._shuffle_warning_animation = None
-                # 恢复背景色
-                if hasattr(self, 'game_frame'):
-                    self.game_frame.config(bg=UIConfig.COLORS['primary'])
+            # 重置闪烁状态
+            self._shuffle_flash_done = False
+            self._shuffle_flash_count = 0
+            # 恢复背景色
+            if hasattr(self, 'game_frame'):
+                self.game_frame.config(bg=UIConfig.COLORS['primary'])
             return
-        
+
         warning_needed, remaining = self.game.get_shuffle_warning()
-        
+
         if warning_needed and remaining > 0:
-            # 显示警告
+            # 中间红色警告文字
             warning_text = f"⚠️ 警告：再失败 {remaining} 次将触发洗牌！"
-            self._shuffle_warning_label.config(text=warning_text)
-            self._shuffle_warning_label.place(relx=0.5, rely=0.1, anchor=tk.CENTER)
-            
-            # 启动闪烁动画（红色闪烁效果）
-            if not self._shuffle_warning_animation:
-                self._animate_shuffle_warning()
-        else:
-            # 隐藏警告
             if self._shuffle_warning_label:
-                self._shuffle_warning_label.place_forget()
+                try:
+                    self._shuffle_warning_label.config(text=warning_text)
+                    self._shuffle_warning_label.place(relx=0.5, rely=0.1, anchor=tk.CENTER)
+                except Exception:
+                    pass
+
+            # 如果尚未完成本轮闪烁，则启动闪烁动画序列
+            if not self._shuffle_flash_done and not self._shuffle_warning_animation:
+                self._shuffle_flash_count = 0
+                self._animate_shuffle_warning()
+
+            # 闪烁完成后，仅显示右侧竖排浅色提示文字
+            if self._shuffle_flash_done and self._shuffle_side_hint_label:
+                try:
+                    vertical_text = "小\n提\n示\n：\n再\n失\n败\n一\n次\n将\n会\n重\n新\n洗\n牌\n，\n请\n注\n意\n记\n忆\n牌\n面\n位\n置~"
+                    self._shuffle_side_hint_label.config(text=vertical_text, justify=tk.LEFT)
+                    self._shuffle_side_hint_label.place(relx=0.98, rely=0.3, anchor=tk.E)
+                except Exception:
+                    pass
+        else:
+            # 当前不需要警告：隐藏并重置状态
+            if self._shuffle_warning_label:
+                try:
+                    self._shuffle_warning_label.place_forget()
+                except Exception:
+                    pass
+            if self._shuffle_side_hint_label:
+                try:
+                    self._shuffle_side_hint_label.place_forget()
+                except Exception:
+                    pass
             if self._shuffle_warning_animation:
-                self.window.after_cancel(self._shuffle_warning_animation)
+                try:
+                    self.window.after_cancel(self._shuffle_warning_animation)
+                except Exception:
+                    pass
                 self._shuffle_warning_animation = None
-                # 恢复背景色
-                if hasattr(self, 'game_frame'):
-                    self.game_frame.config(bg=UIConfig.COLORS['primary'])
+            self._shuffle_flash_done = False
+            self._shuffle_flash_count = 0
+            if hasattr(self, 'game_frame'):
+                self.game_frame.config(bg=UIConfig.COLORS['primary'])
     
     def _animate_shuffle_warning(self):
         """洗牌警告闪烁动画"""
         if not self.game or not self._shuffle_warning_label:
             return
-        
-        # 获取当前颜色
-        current_color = self._shuffle_warning_label.cget('fg')
-        
-        # 在红色和深红色之间切换
-        if current_color == '#FF5252':
-            new_color = '#FF1744'
-        else:
-            new_color = '#FF5252'
-        
-        self._shuffle_warning_label.config(fg=new_color)
-        
-        # 同时改变游戏区域背景色（红色闪烁效果）
-        if hasattr(self, 'game_frame'):
-            current_bg = self.game_frame.cget('bg')
-            if current_bg == UIConfig.COLORS['primary']:
-                self.game_frame.config(bg='#FFEBEE')  # 淡红色背景
+
+        try:
+            # 增加闪烁计数，限制本轮闪烁次数
+            self._shuffle_flash_count += 1
+
+            # 获取当前颜色
+            current_color = self._shuffle_warning_label.cget('fg')
+
+            # 在红色和深红色之间切换
+            if current_color == '#FF5252':
+                new_color = '#FF1744'
             else:
-                self.game_frame.config(bg=UIConfig.COLORS['primary'])
-        
-        # 继续动画
-        self._shuffle_warning_animation = self.window.after(500, self._animate_shuffle_warning)
-    
+                new_color = '#FF5252'
+
+            self._shuffle_warning_label.config(fg=new_color)
+
+            # 同时改变游戏区域背景色（红色闪烁效果）
+            if hasattr(self, 'game_frame'):
+                current_bg = self.game_frame.cget('bg')
+                if current_bg == UIConfig.COLORS['primary']:
+                    self.game_frame.config(bg='#FFEBEE')  # 淡红色背景
+                else:
+                    self.game_frame.config(bg=UIConfig.COLORS['primary'])
+
+            # 如果闪烁次数未达到上限，继续动画；否则停止并标记完成
+            if self._shuffle_flash_count < 4:
+                self._shuffle_warning_animation = self.window.after(500, self._animate_shuffle_warning)
+            else:
+                # 结束本轮闪烁
+                self._shuffle_warning_animation = None
+                self._shuffle_flash_done = True
+                # 恢复背景为主色
+                if hasattr(self, 'game_frame'):
+                    self.game_frame.config(bg=UIConfig.COLORS['primary'])
+                # 隐藏中间大警告，具体侧边提示由 _update_shuffle_warning 控制
+                try:
+                    self._shuffle_warning_label.place_forget()
+                except Exception:
+                    pass
+        except Exception:
+            # 如果标签或窗口已无效，停止动画，避免打断主循环
+            self._shuffle_warning_animation = None
+
     def _render_cards_state(self):
         if not self.game: return
         # 确保重置 resolving_pair 状态，防止卡住
         self.game.resolving_pair = False
         for i, card in enumerate(self.game.cards):
             r, s = card.value
+            # 如果卡牌已经匹配且执行过消失动画（_is_vanished 标记存在），
+            # 则保持消失状态，不再强制绘制出来
+            if card.is_matched and getattr(self.card_buttons[i], '_is_vanished', False):
+                try: self.card_buttons[i].config(state='disabled')
+                except: pass
+                continue
             if card.is_matched:
                 self.card_buttons[i].show_front(r, s)
                 try: self.card_buttons[i].config(state='disabled')

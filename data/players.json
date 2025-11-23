@@ -104,14 +104,14 @@
     "username": "1234",
     "email": "",
     "password": "123456",
-    "points": 435,
-    "level": 5,
+    "points": 235,
+    "level": 9,
     "experience": 0,
-    "total_points_earned": 4035,
-    "total_games": 11,
-    "completed_games": 7,
-    "total_moves": 456,
-    "total_time": 445,
+    "total_points_earned": 8385,
+    "total_games": 21,
+    "completed_games": 16,
+    "total_moves": 773,
+    "total_time": 1078,
     "best_time_normal": 0,
     "best_time_ultimate": 0,
     "items": {},
@@ -123,10 +123,17 @@
       "record_break_normal",
       "speedrunner_normal_45",
       "speedrunner_ultimate_80",
-      "low_moves_normal_32"
+      "low_moves_normal_32",
+      "no_item_10",
+      "points_5000",
+      "normal_master",
+      "win_streak_3",
+      "win_streak_5",
+      "daily_ten_plays",
+      "win_streak_7"
     ],
     "created_at": 1763548912.416925,
-    "last_login": 1763902241.3733025,
+    "last_login": 1763912782.9295387,
     "consecutive_days": 5,
     "game_records": [
       {
@@ -320,6 +327,186 @@
           "undo": 0
         },
         "timestamp": 1763894885.8695138
+      },
+      {
+        "mode": "normal",
+        "grid_size": 4,
+        "username": "1234",
+        "completed": true,
+        "time_used": 62,
+        "moves": 30,
+        "mistakes": 22,
+        "score": 65,
+        "reward": 140,
+        "items_used": {
+          "hint": 0,
+          "time_extend": 0,
+          "shuffle_prevent": 0,
+          "undo": 0
+        },
+        "timestamp": 1763904074.1397436
+      },
+      {
+        "mode": "normal",
+        "grid_size": 4,
+        "username": "1234",
+        "completed": true,
+        "time_used": 50,
+        "moves": 24,
+        "mistakes": 16,
+        "score": 71,
+        "reward": 220,
+        "items_used": {
+          "hint": 0,
+          "time_extend": 0,
+          "shuffle_prevent": 0,
+          "undo": 0
+        },
+        "timestamp": 1763907704.9280186
+      },
+      {
+        "mode": "ultimate",
+        "grid_size": 6,
+        "username": "1234",
+        "completed": false,
+        "time_used": 120,
+        "moves": 58,
+        "mistakes": 50,
+        "score": 42,
+        "reward": 0,
+        "items_used": {
+          "hint": 0,
+          "time_extend": 0,
+          "shuffle_prevent": 0,
+          "undo": 0
+        },
+        "timestamp": 1763907830.1534371
+      },
+      {
+        "mode": "normal",
+        "grid_size": 4,
+        "username": "1234",
+        "completed": true,
+        "time_used": 29,
+        "moves": 17,
+        "mistakes": 9,
+        "score": 72,
+        "reward": 255,
+        "items_used": {
+          "hint": 0,
+          "time_extend": 0,
+          "shuffle_prevent": 0,
+          "undo": 0
+        },
+        "timestamp": 1763908922.4660327
+      },
+      {
+        "mode": "normal",
+        "grid_size": 4,
+        "username": "1234",
+        "completed": true,
+        "time_used": 33,
+        "moves": 18,
+        "mistakes": 10,
+        "score": 72,
+        "reward": 250,
+        "items_used": {
+          "hint": 0,
+          "time_extend": 0,
+          "shuffle_prevent": 0,
+          "undo": 0
+        },
+        "timestamp": 1763909186.2162712
+      },
+      {
+        "mode": "normal",
+        "grid_size": 4,
+        "username": "1234",
+        "completed": true,
+        "time_used": 76,
+        "moves": 42,
+        "mistakes": 34,
+        "score": 61,
+        "reward": 100,
+        "items_used": {
+          "hint": 0,
+          "time_extend": 0,
+          "shuffle_prevent": 0,
+          "undo": 0
+        },
+        "timestamp": 1763909758.0343592
+      },
+      {
+        "mode": "normal",
+        "grid_size": 4,
+        "username": "1234",
+        "completed": true,
+        "time_used": 64,
+        "moves": 32,
+        "mistakes": 24,
+        "score": 58,
+        "reward": 130,
+        "items_used": {
+          "hint": 0,
+          "time_extend": 0,
+          "shuffle_prevent": 0,
+          "undo": 0
+        },
+        "timestamp": 1763909840.5766103
+      },
+      {
+        "mode": "normal",
+        "grid_size": 4,
+        "username": "1234",
+        "completed": true,
+        "time_used": 49,
+        "moves": 25,
+        "mistakes": 17,
+        "score": 66,
+        "reward": 215,
+        "items_used": {
+          "hint": 0,
+          "time_extend": 0,
+          "shuffle_prevent": 0,
+          "undo": 0
+        },
+        "timestamp": 1763909898.196015
+      },
+      {
+        "mode": "normal",
+        "grid_size": 4,
+        "username": "1234",
+        "completed": true,
+        "time_used": 114,
+        "moves": 51,
+        "mistakes": 43,
+        "score": 50,
+        "reward": 100,
+        "items_used": {
+          "hint": 0,
+          "time_extend": 0,
+          "shuffle_prevent": 0,
+          "undo": 0
+        },
+        "timestamp": 1763910633.2683978
+      },
+      {
+        "mode": "normal",
+        "grid_size": 4,
+        "username": "1234",
+        "completed": true,
+        "time_used": 36,
+        "moves": 20,
+        "mistakes": 12,
+        "score": 74,
+        "reward": 240,
+        "items_used": {
+          "hint": 0,
+          "time_extend": 0,
+          "shuffle_prevent": 0,
+          "undo": 0
+        },
+        "timestamp": 1763911577.972477
       }
     ],
     "benefits": {

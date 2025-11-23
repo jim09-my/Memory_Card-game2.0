@@ -42,10 +42,11 @@ class PointsConfig:
 
 class ItemConfig:
     ITEMS = {
-        'hint': {'name': '透视眼', 'description': '偷看一对卡牌', 'price': 200, 'icon': '👁️', 'effect_value': 1},
-        'time_extend': {'name': '时间胶囊', 'description': '延长30秒', 'price': 300, 'icon': '⏳', 'effect_value': 30},
-        'shuffle_prevent': {'name': '防洗牌护盾', 'description': '阻止一次洗牌（仅洗牌模式）', 'price': 400, 'icon': '🛡️', 'effect_value': 1},
-        'undo': {'name': '时光倒流', 'description': '撤销一步', 'price': 250, 'icon': '↩️', 'effect_value': 1}
+        'hint': {'name': '透视眼', 'description': '偷看一对卡牌', 'price': 200, 'icon': '\U0001f441\ufe0f', 'effect_value': 1},
+        'time_extend': {'name': '时间胶囊', 'description': '延长30秒', 'price': 300, 'icon': '\u23f3', 'effect_value': 30},
+        'shuffle_prevent': {'name': '防洗牌护盾', 'description': '阻止一次洗牌（仅洗牌模式）', 'price': 400, 'icon': '\U0001f6e1\ufe0f', 'effect_value': 1},
+        # 将原“时光倒流”替换为“时间静止”道具，键名保持为 undo 以兼容现有数据与成就逻辑
+        'undo': {'name': '时间静止', 'description': '在终极模式中冻结时间10秒（仍可翻牌配对）', 'price': 250, 'icon': '\u23f8\ufe0f', 'effect_value': 10}
     }
 
 class AchievementConfig:

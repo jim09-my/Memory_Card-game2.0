@@ -336,6 +336,8 @@ class Game:
             print("🛡️ 防洗牌道具激活，洗牌被阻止")
             # 消耗防洗牌道具（一次性使用）
             self.shuffle_prevent_active = False
+            # 使用防洗牌后，本轮连续失败计数清零，重新开始新一轮统计
+            self.consecutive_failures = 0
             return False
         
         # 检查是否达到阈值

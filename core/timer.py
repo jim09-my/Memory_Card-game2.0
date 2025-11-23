@@ -23,16 +23,14 @@ class Timer:
 
     def start(self):
         """开始计时"""
-        # 如果计时器尚未运行，开始计时；如果此前已停止则重置基准
         if not self.is_running:
-            # 如果从未开始或已被停止，重新设置起始时间
-            if self.start_time is None or (self.pause_time is not None and not self.is_paused):
+            # 如果从未开始，设置起始时间
+            if self.start_time is None:
                 self.start_time = time.time()
                 self.paused_duration = 0
-            else:
-                # 正常从暂停恢复，不重置 start_time
-                if self.is_paused and self.pause_time:
-                    self.paused_duration += time.time() - self.pause_time
+            # 如果从暂停恢复，累加暂停时长
+            elif self.is_paused and self.pause_time:
+                self.paused_duration += time.time() - self.pause_time
             self.is_running = True
             self.is_paused = False
             print("计时器已启动")
@@ -122,6 +120,9 @@ class Timer:
         :param seconds: 秒数
         :return: 格式化的时间字符串 (MM:SS)
         """
+        if seconds is None:
+            return "00:00"
+        seconds = float(seconds)
         minutes = int(seconds // 60)
         secs = int(seconds % 60)
         return f"{minutes:02d}:{secs:02d}"
