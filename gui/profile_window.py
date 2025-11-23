@@ -60,7 +60,7 @@ class ProfileWindow:
         self.canvas.create_text(circle_x, circle_y+8, text="胜率", font=('Arial', 8), fill='white')
         
         # 3. 用户名 (距离标题稍微近一点)
-        self.canvas.create_text(center_x, y_pos + 45, 
+        self.canvas.create_text(center_x, y_pos + 55, 
                                 text=f"玩家：{self.player.username}", 
                                 font=('Arial', 12), fill='#546E7A')
 

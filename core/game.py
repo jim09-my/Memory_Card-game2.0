@@ -382,6 +382,9 @@ class Game:
         # 重置resolving_pair状态，防止卡住
         self.resolving_pair = False
 
+        # 记录洗牌状态，便于 UI 层检测并重新渲染
+        self.shuffle_status = 'shuffled'
+
         print("🔀 卡牌已洗牌")
         return True
     

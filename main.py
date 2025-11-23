@@ -16,7 +16,7 @@ def ensure_data_files():
     defaults = {
         DataConfig.PLAYERS_FILE: {},
         DataConfig.RECORDS_FILE: [],
-        DataConfig.ACHIEVEMENTS_FILE: []
+         DataConfig.ACHIEVEMENTS_FILE: []
     }
 
     data_dir = os.path.dirname(DataConfig.PLAYERS_FILE)

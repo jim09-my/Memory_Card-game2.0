@@ -1,11 +1,3 @@
-"""
-主窗口
-游戏主菜单界面 - v3.6 像素级复刻版
-核心修改：
-1. 标题重构：严格复刻截图样式——超厚白边 + 橙色立体层 + 亮黄表面，使用高密度圆周算法消除毛刺。
-2. 按钮保持：保留你满意的 v3.5 糖果风格（黄/蓝/紫/绿）。
-"""
-
 import tkinter as tk
 from tkinter import messagebox
 import math 
@@ -14,13 +6,84 @@ from gui.shop_window import ShopWindow
 from gui.career_window import CareerWindow
 from gui.profile_window import ProfileWindow
 from config import UIConfig
+from managers.data_manager import save_player
 
-# --- 自定义组件：糖果风格按钮 (保持不变) ---
+# --- 辅助：圆角矩形绘制 ---
+def draw_rounded_rect(canvas, x, y, w, h, r, fill, outline=""):
+    canvas.create_arc(x, y, x+2*r, y+2*r, start=90, extent=90, fill=fill, outline=outline)
+    canvas.create_arc(x+w-2*r, y, x+w, y+2*r, start=0, extent=90, fill=fill, outline=outline)
+    canvas.create_arc(x+w-2*r, y+h-2*r, x+w, y+h, start=270, extent=90, fill=fill, outline=outline)
+    canvas.create_arc(x, y+h-2*r, x+2*r, y+h, start=180, extent=90, fill=fill, outline=outline)
+    canvas.create_rectangle(x+r, y, x+w-r, y+h, fill=fill, outline=outline)
+    canvas.create_rectangle(x, y+r, x+w, y+h-r, fill=fill, outline=outline)
+
+# --- 自定义退出弹窗 (优化版) ---
+class ExitDialog(tk.Toplevel):
+    def __init__(self, parent, on_confirm):
+        super().__init__(parent)
+        self.on_confirm = on_confirm
+        self.configure(bg=UIConfig.COLORS['primary'])
+        self.overrideredirect(True) # 去除系统边框
+        self.attributes('-topmost', True)
+        
+        # 窗口尺寸
+        w, h = 400, 240 # 高度稍微减小
+        
+        screen_w = self.winfo_screenwidth()
+        screen_h = self.winfo_screenheight()
+        x = (screen_w - w) // 2
+        y = (screen_h - h) // 2
+        self.geometry(f"{w}x{h}+{x}+{y}")
+        
+        self.canvas = tk.Canvas(self, width=w, height=h, bg=UIConfig.COLORS['primary'], highlightthickness=0)
+        self.canvas.pack(fill=tk.BOTH, expand=True)
+        
+        # 1. 绘制阴影
+        draw_rounded_rect(self.canvas, 8, 8, w-16, h-16, 25, fill='#B0BEC5')
+        
+        # 2. 绘制白色主体
+        draw_rounded_rect(self.canvas, 4, 4, w-16, h-16, 25, fill='white')
+        
+        # 3. 内容 (优化排版)
+        # 表情缩小，位置上移
+        self.canvas.create_text(w/2, 75, text="🥺", font=("Segoe UI Emoji", 36)) # 字体改小
+        
+        # 标题居中
+        self.canvas.create_text(w/2, 125, text="这就走了吗？", 
+                                font=("Arial Rounded MT Bold", 18, "bold"), fill='#455A64')
+        
+        # 4. 按钮区域 (上移)
+        btn_frame = tk.Frame(self, bg='white')
+        btn_frame.place(relx=0.5, rely=0.80, anchor=tk.CENTER)
+        
+        # 再玩一会 (绿色)
+        self._create_mini_btn(btn_frame, "再玩一会", '#A5D6A7', '#2E7D32', self.destroy).pack(side=tk.LEFT, padx=15)
+        
+        # 狠心离开 (粉色)
+        self._create_mini_btn(btn_frame, "狠心离开", '#FFAB91', '#D84315', self._confirm_exit).pack(side=tk.LEFT, padx=15)
+        
+        self.grab_set()
+
+    def _create_mini_btn(self, parent, text, bg_col, text_col, cmd):
+        btn = tk.Canvas(parent, width=110, height=40, bg='white', highlightthickness=0)
+        
+        def draw():
+            btn.delete('all')
+            draw_rounded_rect(btn, 0, 0, 110, 40, 20, bg_col)
+            btn.create_text(55, 20, text=text, font=('Arial Rounded MT Bold', 11, 'bold'), fill=text_col)
+
+        draw()
+        btn.bind('<Enter>', lambda e: btn.config(cursor='hand2'))
+        btn.bind('<Leave>', lambda e: btn.config(cursor=''))
+        btn.bind('<Button-1>', lambda e: cmd())
+        return btn
+
+    def _confirm_exit(self):
+        self.destroy()
+        self.on_confirm()
+
+
 class CandyButton(tk.Canvas):
-    """
-    糖果/果冻风格按钮
-    特点：圆润、有高光、立体阴影、文字描边
-    """
     def __init__(self, master, text, command=None, width=260, height=75, theme='yellow'):
         super().__init__(master, width=width, height=height, 
                          bg=UIConfig.COLORS['primary'], highlightthickness=0, bd=0)
@@ -30,7 +93,6 @@ class CandyButton(tk.Canvas):
         self.btn_height = height
         self.theme = theme
         
-        # 颜色配置库 (主体色, 阴影色, 高光色, 文字色, 文字描边色)
         self.colors = {
             'yellow': ('#FFD54F', '#FFA000', '#FFE082', '#FFFFFF', '#795548'), 
             'blue':   ('#4FC3F7', '#0288D1', '#81D4FA', '#FFFFFF', '#01579B'),
@@ -120,11 +182,9 @@ class CandyButton(tk.Canvas):
             if self._command:
                 self.after(50, self._command)
 
-# --- 主窗口类 ---
 class MainWindow:
     def __init__(self, player):
         self.player = player
-        
         if hasattr(self.player, 'add_change_listener'):
             try: self.player.add_change_listener(self._save_player)
             except: pass
@@ -133,20 +193,15 @@ class MainWindow:
         self.window.title("SCAU 记忆翻牌")
         self.window.geometry("1000x750")
         self.window.config(bg=UIConfig.COLORS['primary'])
-        
         self._center_window()
         self.window.resizable(False, False)
         
-        # 1. 背景层
         self.canvas = tk.Canvas(self.window, bg=UIConfig.COLORS['primary'], highlightthickness=0, bd=0)
         self.canvas.place(x=0, y=0, relwidth=1, relheight=1)
 
         self._create_background_decorations()
         self._create_title()
-
-        # 2. 按钮层
         self._create_menu_buttons()
-        
         self.window.protocol("WM_DELETE_WINDOW", self._on_closing)
 
     def _center_window(self):
@@ -158,47 +213,28 @@ class MainWindow:
         self.window.geometry(f"+{x}+{y}")
 
     def _create_background_decorations(self):
-        """绘制背景装饰"""
         self.canvas.create_oval(-50, -50, 250, 250, fill='#4DB6AC', outline="")
         w, h = 1000, 750
         self.canvas.create_oval(w-200, h-200, w+100, h+100, fill='#FFCA28', outline="")
         self.canvas.create_oval(100, h-150, 220, h-30, fill='#FFF176', outline="")
 
     def _create_title(self):
-        """
-        严格复刻截图样式
-        算法：多层高密度圆周堆叠
-        """
         center_x = 500
         y_pos = 160
-        
         text = "SCAU 记忆翻牌"
-        # 使用系统中最圆润的粗体
         font = ("Arial Rounded MT Bold", 64, "bold")
-        
-        # --- 配色方案 (取自截图) ---
-        # 1. 外层超厚白边
         stroke_color = '#FFFFFF' 
-        # 2. 内部立体阴影 (深橙色/金色) - 模拟截图文字里的深色部分
-        inner_shadow_color = '#F9A825' # Dark Yellow/Orange
-        # 3. 表面亮黄色 - 模拟截图文字的最亮部分
-        face_color = '#FFEB3B' # Bright Yellow
+        inner_shadow_color = '#F9A825'
+        face_color = '#FFEB3B'
         
-        # --- 绘制逻辑 ---
-        
-        # 第1层：超厚白边 (模拟贴纸效果)
-        # 截图里的白边非常厚，我们需要堆叠一个半径很大的圆
-        # 为了绝对光滑无毛刺，steps 设置为 72 (每5度画一次)
-        stroke_radius = 10 # 边框厚度
+        stroke_radius = 10
         steps = 72 
-        
         for i in range(steps):
             angle = i * (2 * math.pi) / steps
             dx = stroke_radius * math.cos(angle)
             dy = stroke_radius * math.sin(angle)
             self.canvas.create_text(center_x+dx, y_pos+dy, text=text, font=font, fill=stroke_color)
         
-        # 第1.5层：填补白边内部缝隙 (防止半径太大导致中间有空洞)
         fill_radius = 5
         for i in range(36):
             angle = i * (2 * math.pi) / 36
@@ -206,31 +242,25 @@ class MainWindow:
             dy = fill_radius * math.sin(angle)
             self.canvas.create_text(center_x+dx, y_pos+dy, text=text, font=font, fill=stroke_color)
 
-        # 第2层：内部立体阴影 (向右下偏移)
-        # 模拟文字厚度
         shadow_offset = 5
         self.canvas.create_text(center_x, y_pos+shadow_offset, text=text, font=font, fill=inner_shadow_color)
-        # 为了让立体感更强，稍微横向也偏移一点点
         self.canvas.create_text(center_x+2, y_pos+shadow_offset, text=text, font=font, fill=inner_shadow_color)
 
-        # 第3层：文字表面 (亮黄色)
         self.canvas.create_text(center_x, y_pos, text=text, font=font, fill=face_color)
         
-        # 4. 欢迎语 (保持原样)
         self.canvas.create_text(center_x, y_pos + 90, 
                                 text=f"✨ 欢迎回来，{self.player.username} ✨", 
                                 font=("Arial", 16, "bold"), fill='white')
 
     def _create_menu_buttons(self):
-        """创建糖果风格按钮"""
         btn_frame = tk.Frame(self.window, bg=UIConfig.COLORS['primary'])
         btn_frame.place(relx=0.5, rely=0.62, anchor=tk.CENTER)
 
         buttons_config = [
             ("开始游戏", self._start_game, 'yellow'),
             ("道具商城", self._open_shop, 'blue'),
-            ("游戏生涯", self._open_career, 'purple'), # 葡萄紫
-            ("个人主页", self._open_profile, 'green')   # 薄荷绿
+            ("游戏生涯", self._open_career, 'purple'),
+            ("个人主页", self._open_profile, 'green') 
         ]
 
         for text, cmd, theme in buttons_config:
@@ -238,7 +268,6 @@ class MainWindow:
                               width=280, height=75, theme=theme)
             btn.pack(pady=10)
 
-    # --- 交互回调 ---
     def _start_game(self):
         self.window.withdraw()
         def on_close():
@@ -255,27 +284,17 @@ class MainWindow:
         ProfileWindow(self.window, self.player)
 
     def _save_player(self):
-        from config import DataConfig
-        import json
-        import os
-        try:
-            if os.path.exists(DataConfig.PLAYERS_FILE):
-                with open(DataConfig.PLAYERS_FILE, 'r', encoding='utf-8') as f:
-                    db = json.load(f)
-            else:
-                db = {}
-            db[self.player.username] = self.player.to_dict()
-            with open(DataConfig.PLAYERS_FILE, 'w', encoding='utf-8') as f:
-                json.dump(db, f, indent=2, ensure_ascii=False)
+        try: save_player(self.player)
         except: pass
 
     def _on_closing(self):
-        if messagebox.askokcancel("退出", "确定要退出游戏吗？"):
+        def perform_exit():
             if hasattr(self.player, 'remove_change_listener'):
                 try: self.player.remove_change_listener(self._save_player)
                 except: pass
             self._save_player()
             self.window.destroy()
+        ExitDialog(self.window, perform_exit)
 
     def run(self):
         self.window.mainloop()

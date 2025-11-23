@@ -27,7 +27,7 @@ THEME = {
     'card_shadow': '#00695C',       
     'text_stroke': '#FFFFFF',       
     'text_shadow': '#F9A825',       
-    'text_face': '#FFEB3B',         
+    'text_face': "#FEF329",         
     'input_bg': '#F5F5F5',          
     'input_border': '#4DD0E1',      
     'link_color': '#039BE5',

@@ -23,11 +23,18 @@ class Timer:
 
     def start(self):
         """开始计时"""
+        # 如果计时器尚未运行，开始计时；如果此前已停止则重置基准
         if not self.is_running:
-            self.start_time = time.time()
+            # 如果从未开始或已被停止，重新设置起始时间
+            if self.start_time is None or (self.pause_time is not None and not self.is_paused):
+                self.start_time = time.time()
+                self.paused_duration = 0
+            else:
+                # 正常从暂停恢复，不重置 start_time
+                if self.is_paused and self.pause_time:
+                    self.paused_duration += time.time() - self.pause_time
             self.is_running = True
             self.is_paused = False
-            self.paused_duration = 0
             print("计时器已启动")
 
     def pause(self):

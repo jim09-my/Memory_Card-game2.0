@@ -1,16 +1,20 @@
-"""
-道具商城窗口 - v4.1 优化版
-优化：紧凑布局、标题加深、间距调整
-"""
-
 import tkinter as tk
 from tkinter import messagebox
-import math
 from config import ItemConfig, UIConfig
 from managers.shop_manager import ShopManager
 from managers.data_manager import save_player
 
-# --- 扁平化购买按钮 (保持不变) ---
+# --- 辅助：圆角绘制工具 ---
+def draw_rounded_rect(canvas, x, y, w, h, r, fill, outline=""):
+    # 绘制圆角矩形路径
+    canvas.create_arc(x, y, x+2*r, y+2*r, start=90, extent=90, fill=fill, outline=outline)
+    canvas.create_arc(x+w-2*r, y, x+w, y+2*r, start=0, extent=90, fill=fill, outline=outline)
+    canvas.create_arc(x+w-2*r, y+h-2*r, x+w, y+h, start=270, extent=90, fill=fill, outline=outline)
+    canvas.create_arc(x, y+h-2*r, x+2*r, y+h, start=180, extent=90, fill=fill, outline=outline)
+    canvas.create_rectangle(x+r, y, x+w-r, y+h, fill=fill, outline=outline)
+    canvas.create_rectangle(x, y+r, x+w, y+h-r, fill=fill, outline=outline)
+
+# --- 扁平购买按钮 (胶囊风格) ---
 class FlatBuyButton(tk.Canvas):
     def __init__(self, master, text, command=None, width=90, height=32, state='normal'):
         super().__init__(master, width=width, height=height, bg='white', highlightthickness=0, bd=0)
@@ -40,9 +44,11 @@ class FlatBuyButton(tk.Canvas):
         x2, y2 = cx + w/2, cy + h/2
         col = '#FFF176' if self._state == 'hover' else self.bg_color
         
+        # 绘制胶囊形状
         self.create_arc(x1, y1, x1+2*r, y1+2*r, start=90, extent=180, fill=col, outline="")
         self.create_arc(x2-2*r, y1, x2, y1+2*r, start=270, extent=180, fill=col, outline="")
         self.create_rectangle(x1+r, y1, x2-r, y2+1, fill=col, outline="")
+        
         self.create_text(cx, cy, text=self.text, font=('Arial Rounded MT Bold', 11), fill=self.text_color)
 
     def _on_enter(self, e): self._state = 'hover'; self.config(cursor='hand2'); self._draw()
@@ -54,16 +60,14 @@ class FlatBuyButton(tk.Canvas):
             if self._command: self.after(50, self._command)
 
 class ShopWindow:
-    def __init__(self, master, player, on_close_callback=None):
+    def __init__(self, master, player):
         self.master = master
         self.player = player
-        self.on_close_callback = on_close_callback
         self.shop_manager = ShopManager()
 
         self.window = tk.Toplevel(master)
         self.window.title("道具商城")
-        # 修改1：高度减小到 600，更紧凑
-        self.window.geometry("500x600") 
+        self.window.geometry("500x600")
         self.window.config(bg='#E0F7FA')
         self.window.transient(master)
         self.window.grab_set()
@@ -96,19 +100,15 @@ class ShopWindow:
 
     def _draw_title(self):
         center_x = 250
-        # 修改2：标题下移 (50 -> 60)
         y_pos = 60
         text = "道具商城"
         font = ("Arial Rounded MT Bold", 32, "bold")
         
         for dx, dy in [(-1,-1), (-1,1), (1,-1), (1,1)]:
             self.canvas.create_text(center_x+dx, y_pos+dy, text=text, font=font, fill='white')
-        
-        # 修改3：标题颜色加深 (#FFF59D -> #FBC02D 深金黄)
         self.canvas.create_text(center_x, y_pos, text=text, font=font, fill='#FBC02D')
 
     def _create_points_display(self):
-        # 修改4：积分与标题间距拉大 (y=90 -> y=110)
         tk.Label(self.window, text=f"当前积分: {self.player.points}", font=('Arial', 12, 'bold'), 
                  bg='#E0F7FA', fg='#00796B').place(relx=0.5, y=110, anchor=tk.CENTER)
 
@@ -120,15 +120,14 @@ class ShopWindow:
 
     def _create_items_area(self):
         container = tk.Frame(self.window, bg='#E0F7FA')
-        # 修改5：列表区域位置调整
-        container.place(relx=0.5, rely=0.60, anchor=tk.CENTER, width=440, height=420)
+        container.place(relx=0.5, rely=0.60, anchor=tk.CENTER, width=460, height=420)
         
         canvas = tk.Canvas(container, bg='#E0F7FA', highlightthickness=0)
         scrollbar = tk.Scrollbar(container, orient="vertical", command=canvas.yview)
         self.scrollable_frame = tk.Frame(canvas, bg='#E0F7FA')
 
         self.scrollable_frame.bind("<Configure>", lambda e: canvas.configure(scrollregion=canvas.bbox("all")))
-        canvas.create_window((220, 0), window=self.scrollable_frame, anchor="n")
+        canvas.create_window((230, 0), window=self.scrollable_frame, anchor="n")
         canvas.configure(yscrollcommand=scrollbar.set)
 
         canvas.pack(side="left", fill="both", expand=True)
@@ -146,23 +145,31 @@ class ShopWindow:
         row_count = 0
         
         for item_id, item in items.items():
-            # 正方形卡片
-            card = tk.Frame(self.scrollable_frame, bg='white', width=180, height=180)
-            card.grid(row=row_count, column=col_count, padx=10, pady=10)
-            card.pack_propagate(False)
+            # 使用 Canvas 绘制圆角卡片背景
+            card_w, card_h = 180, 190
+            card = tk.Canvas(self.scrollable_frame, bg='#E0F7FA', width=card_w, height=card_h, highlightthickness=0)
+            card.grid(row=row_count, column=col_count, padx=15, pady=15)
             
-            tk.Label(card, text=item.get('icon', '🎁'), font=('Segoe UI Emoji', 32), bg='white').pack(pady=(15, 5))
-            tk.Label(card, text=item['name'], font=('Arial Rounded MT Bold', 12), bg='white', fg='#455A64').pack()
+            # 绘制白色圆角矩形
+            draw_rounded_rect(card, 0, 0, card_w, card_h, 20, fill='white', outline="")
+            
+            content = tk.Frame(card, bg='white')
+            card.create_window(card_w/2, card_h/2, window=content, width=card_w-20, height=card_h-20)
+
+            tk.Label(content, text=item.get('icon', '🎁'), font=('Segoe UI Emoji', 32), bg='white').pack(pady=(10, 5))
+            tk.Label(content, text=item['name'], font=('Arial Rounded MT Bold', 12), bg='white', fg='#455A64').pack()
             
             price = item['price']
-            tk.Label(card, text=f"{price} 积分", font=('Arial', 10, 'bold'), bg='white', fg='#FFB74D').pack(pady=(2, 5))
+            tk.Label(content, text=f"{price} 积分", font=('Arial', 10, 'bold'), bg='white', fg='#FFB74D').pack(pady=(2, 5))
             
             btn_state = 'normal' if self.player.points >= price else 'disabled'
-            FlatBuyButton(card, text="购买", width=80, height=28, state=btn_state,
-                          command=lambda i=item_id: self._purchase(i)).pack()
+            
+            btn = FlatBuyButton(content, text="购买", width=80, height=28, state=btn_state,
+                          command=lambda i=item_id: self._purchase(i))
+            btn.pack(pady=5)
             
             owned = self.player.get_item_count(item_id)
-            tk.Label(card, text=f"持有: {owned}", font=('Arial', 8), bg='white', fg='#B0BEC5').place(relx=0.95, rely=0.95, anchor=tk.SE)
+            card.create_text(card_w-15, card_h-15, text=f"持有: {owned}", font=('Arial', 9), fill='#B0BEC5', anchor='se')
 
             col_count += 1
             if col_count >= 2:

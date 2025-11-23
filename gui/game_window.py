@@ -393,7 +393,52 @@ class GameWindow:
         # 确保重置 resolving_pair 状态，防止卡住
         if self.game:
             self.game.resolving_pair = False
+        # 重新渲染卡牌状态
         self._render_cards_state()
+
+        # 额外步骤：有时 PlayingCard 会保留动画结束后的 _is_vanished 标记，
+        # 导致洗牌后未匹配卡牌仍然不可点击或不可绘制。
+        # 因此在洗牌后强制清理未匹配卡牌的消失标记并恢复为可用状态。
+        try:
+            for i, btn in enumerate(self.card_buttons):
+                if i >= len(self.game.cards):
+                    continue
+                card = self.game.cards[i]
+                # 未匹配的卡牌应当可交互并显示背面
+                if not card.is_matched:
+                    # 删除内部消失标记（如果存在）
+                    if getattr(btn, '_is_vanished', False):
+                        try:
+                            delattr(btn, '_is_vanished')
+                        except Exception:
+                            try:
+                                del btn._is_vanished
+                            except Exception:
+                                pass
+                    # 确保可点击并显示背面
+                    try:
+                        btn.config(state='normal')
+                    except Exception:
+                        pass
+                    btn.show_back()
+                else:
+                    # 匹配的卡牌保持禁用/正面显示
+                    try:
+                        btn.config(state='disabled')
+                    except Exception:
+                        pass
+        except Exception:
+            pass
+
+        # 如果游戏对象上记录了 shuffle_status，清理它，避免重复处理
+        try:
+            if hasattr(self.game, 'shuffle_status'):
+                delattr(self.game, 'shuffle_status')
+        except Exception:
+            try:
+                self.game.shuffle_status = None
+            except Exception:
+                pass
 
     def _update_loop(self):
         """定期更新游戏状态和时间显示"""
@@ -416,6 +461,23 @@ class GameWindow:
         if self.game.timer.time_limit is not None and self.game.timer.is_time_up():
             self._on_game_failed()
             return
+
+        # 如果游戏对象标记了已洗牌状态，重建卡牌网格并重渲染，避免 PlayingCard 遗留的 _is_vanished 标记
+        try:
+            if getattr(self.game, 'shuffle_status', None) == 'shuffled':
+                # 重新创建卡牌按钮（彻底重置控件状态）
+                self._create_card_grid()
+                self._render_cards_state()
+                # 清理标志
+                try:
+                    delattr(self.game, 'shuffle_status')
+                except Exception:
+                    try:
+                        self.game.shuffle_status = None
+                    except Exception:
+                        pass
+        except Exception:
+            pass
         
         # 继续循环更新（100ms刷新一次）
         self.update_task = self.window.after(100, self._update_loop)
