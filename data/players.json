@@ -104,27 +104,30 @@
     "username": "1234",
     "email": "",
     "password": "123456",
-    "points": 1410,
-    "level": 3,
+    "points": 435,
+    "level": 5,
     "experience": 0,
-    "total_points_earned": 2360,
-    "total_games": 9,
-    "completed_games": 6,
-    "total_moves": 405,
-    "total_time": 284,
+    "total_points_earned": 4035,
+    "total_games": 11,
+    "completed_games": 7,
+    "total_moves": 456,
+    "total_time": 445,
     "best_time_normal": 0,
     "best_time_ultimate": 0,
-    "items": {
-      "hint": 1,
-      "shuffle_prevent": 1,
-      "time_extend": 1
-    },
+    "items": {},
     "achievements": [
-      "first_game"
+      "first_game",
+      "login_streak_3",
+      "first_win",
+      "first_ultimate_win",
+      "record_break_normal",
+      "speedrunner_normal_45",
+      "speedrunner_ultimate_80",
+      "low_moves_normal_32"
     ],
     "created_at": 1763548912.416925,
-    "last_login": 1763745810.9680612,
-    "consecutive_days": 4,
+    "last_login": 1763894736.2748294,
+    "consecutive_days": 5,
     "game_records": [
       {
         "mode": "normal",
@@ -281,6 +284,42 @@
           "undo": 0
         },
         "timestamp": 1763741963.598457
+      },
+      {
+        "mode": "normal",
+        "grid_size": 4,
+        "username": "1234",
+        "completed": true,
+        "time_used": 41,
+        "moves": 22,
+        "mistakes": 14,
+        "score": 66,
+        "reward": 230,
+        "items_used": {
+          "hint": 0,
+          "time_extend": 0,
+          "shuffle_prevent": 0,
+          "undo": 0
+        },
+        "timestamp": 1763867268.4069054
+      },
+      {
+        "mode": "ultimate",
+        "grid_size": 6,
+        "username": "1234",
+        "completed": false,
+        "time_used": 120,
+        "moves": 29,
+        "mistakes": 29,
+        "score": 0,
+        "reward": 0,
+        "items_used": {
+          "hint": 0,
+          "time_extend": 0,
+          "shuffle_prevent": 0,
+          "undo": 0
+        },
+        "timestamp": 1763894885.8695138
       }
     ],
     "benefits": {
@@ -291,7 +330,7 @@
     "username": "admin",
     "email": "",
     "password": "123456",
-    "points": 855,
+    "points": 105,
     "level": 2,
     "experience": 0,
     "total_points_earned": 1905,
@@ -313,7 +352,7 @@
       "win_streak_3"
     ],
     "created_at": 1763647736.8366134,
-    "last_login": 1763837481.795224,
+    "last_login": 1763862105.83386,
     "consecutive_days": 4,
     "game_records": [
       {

@@ -1,396 +1,354 @@
 """
-登录窗口
+登录窗口 - v4.1 修复版
+修复：
+1. 修复了 THEME 字典缺少 'bg_color' 导致的 KeyError 崩溃问题。
+2. 保持 v4.0 的纯代码矢量风景背景（蓝天、彩色山丘）。
+3. 保持 v3.8 的完美输入框和高清字体。
 """
 
 import tkinter as tk
 from tkinter import messagebox
-from PIL import Image, ImageTk
-import json
+import math
 import os
-from config import DataConfig, ASSETS_DIR, AchievementConfig
+import json
+import random
+from PIL import Image, ImageTk
+
+# --- 保持原本的导入结构 ---
+from config import DataConfig, ASSETS_DIR, AchievementConfig, UIConfig
 from core.player import Player
 from managers.data_manager import add_unlocked_achievement
 
-class LoginWindow:
-    """登录/注册窗口"""
+# --- UI 配色方案 ---
+THEME = {
+    # 核心UI颜色 (v3.8)
+    'bg_color': '#E0F7FA',
+    'card_bg': '#FFFFFF',           
+    'card_shadow': '#00695C',       
+    'text_stroke': '#FFFFFF',       
+    'text_shadow': '#F9A825',       
+    'text_face': '#FFEB3B',         
+    'input_bg': '#F5F5F5',          
+    'input_border': '#4DD0E1',      
+    'link_color': '#039BE5',
+    
+    # 矢量背景色系
+    'bg_sky': '#E3F2FD',            # 天空蓝
+    'hill_1': '#F8BBD0',            # 远山粉
+    'hill_2': '#C5CAE9',            # 中山紫
+    'hill_3': '#B2DFDB',            # 近山绿
+    'sun_glow': '#FFF9C4',          # 阳光
+}
 
+class GraphicsUtils:
+    """绘图工具类：用于画出完美的胶囊形状"""
+    @staticmethod
+    def draw_solid_capsule(canvas, x, y, w, h, color):
+        """绘制无缝隙实心胶囊"""
+        r = h / 2
+        canvas.create_arc(x, y, x + h, y + h, start=90, extent=180, fill=color, outline="")
+        canvas.create_arc(x + w - h, y, x + w, y + h, start=270, extent=180, fill=color, outline="")
+        canvas.create_rectangle(x + r, y, x + w - r, y + h, fill=color, outline="")
+
+# --- 自定义组件：糖果按钮 ---
+class CandyButton(tk.Canvas):
+    def __init__(self, master, text, command=None, width=200, height=60, theme='yellow'):
+        super().__init__(master, width=width, height=height, 
+                         bg=THEME['card_bg'], highlightthickness=0, bd=0)
+        self.text = text
+        self._command = command
+        self.width = width
+        self.height = height
+        self.theme = theme
+        
+        self.colors = {
+            'yellow': ('#FFD54F', '#FFA000', '#FFE082', '#FFFFFF', '#795548'),
+            'blue':   ('#4FC3F7', '#0288D1', '#81D4FA', '#FFFFFF', '#01579B'),
+        }
+        self._state = 'normal'
+        self.bind('<Enter>', self._on_enter)
+        self.bind('<Leave>', self._on_leave)
+        self.bind('<Button-1>', self._on_press)
+        self.bind('<ButtonRelease-1>', self._on_release)
+        self._draw()
+
+    def _draw(self):
+        self.delete('all')
+        cx, cy = self.width / 2, self.height / 2
+        scale = 1.02 if self._state == 'hover' else (0.96 if self._state == 'active' else 1.0)
+        w, h = (self.width - 4) * scale, (self.height - 4) * scale
+        
+        colors = self.colors.get(self.theme, self.colors['yellow'])
+        body_col, shadow_col, gloss_col, text_col, stroke_col = colors
+        
+        offset_y = 4 if self._state != 'active' else 0
+        shadow_depth = 5 if self._state != 'active' else 2
+        x, y = cx - w/2, cy - h/2
+        
+        GraphicsUtils.draw_solid_capsule(self, x, y + offset_y + shadow_depth, w, h, shadow_col)
+        GraphicsUtils.draw_solid_capsule(self, x, y + offset_y, w, h, body_col)
+        
+        gloss_h, gloss_w = h * 0.4, w * 0.6
+        self.create_arc(x + 15, y + offset_y + 5, x + 15 + gloss_w, y + offset_y + 5 + gloss_h * 2, 
+                        start=90, extent=100, style=tk.CHORD, fill=gloss_col, outline="")
+
+        font = ('Microsoft YaHei UI', 18, 'bold')
+        for dx, dy in [(-1,-1), (-1,1), (1,-1), (1,1)]: 
+            self.create_text(cx+dx, cy+offset_y+dy, text=self.text, font=font, fill=stroke_col)
+        self.create_text(cx, cy+offset_y, text=self.text, font=font, fill=text_col)
+
+    def _on_enter(self, e): self._state = 'hover'; self.config(cursor='hand2'); self._draw()
+    def _on_leave(self, e): self._state = 'normal'; self.config(cursor=''); self._draw()
+    def _on_press(self, e): self._state = 'active'; self._draw()
+    def _on_release(self, e): 
+        if self._state == 'active': 
+            self._state = 'hover'; self._draw()
+            if self._command: self.after(50, self._command)
+
+# --- 自定义组件：糖果输入框 ---
+class CandyEntry(tk.Canvas):
+    def __init__(self, master, width=350, height=55, placeholder="", is_password=False):
+        super().__init__(master, width=width, height=height, bg=THEME['card_bg'], highlightthickness=0, bd=0)
+        self.w = width
+        self.h = height
+        self._draw_bg()
+        
+        self.entry = tk.Entry(self, bg=THEME['input_bg'], bd=0, font=('Microsoft YaHei UI', 12), 
+                              fg='#455A64', highlightthickness=0, insertbackground='#263238')
+        if is_password:
+            self.entry.config(show='●')
+        self.create_window(width/2, height/2, window=self.entry, width=width-40, height=30)
+
+    def _draw_bg(self):
+        # 1. 边框层
+        GraphicsUtils.draw_solid_capsule(self, 2, 2, self.w-4, self.h-4, THEME['input_border'])
+        # 2. 内胆层 (背景)
+        border_width = 2
+        GraphicsUtils.draw_solid_capsule(self, 2+border_width, 2+border_width, 
+                                         self.w-4-2*border_width, self.h-4-2*border_width, THEME['input_bg'])
+
+    def get(self): return self.entry.get()
+    def set_text(self, text): self.entry.delete(0, tk.END); self.entry.insert(0, text)
+
+# --- 主窗口逻辑 ---
+class LoginWindow:
     def __init__(self, on_login_success):
-        """
-        初始化登录窗口
-        :param on_login_success: 登录成功回调函数
-        """
         self.on_login_success = on_login_success
         self.window = tk.Tk()
-        self.window.title("记忆翻牌游戏 - 登录")
+        self.window.title("SCAU 记忆翻牌 - 登录")
         self.window.geometry("1100x700")
         self.window.resizable(False, False)
-
-        self.bg_image = None
-        self.register_window = None
-
-        # 创建界面（内部会再一次居中为最终大小）
-        self._create_widgets()
-
-        # 加载玩家数据库
+        self.window.config(bg=THEME['bg_sky']) # 使用天空蓝背景
+        
+        self._center_window()
         self.players_db = self._load_players()
-
         self._hidden_login_clicks = 0
+        
+        # 1. 矢量背景层 (Canvas)
+        self.canvas_bg = tk.Canvas(self.window, highlightthickness=0, bd=0, bg=THEME['bg_sky'])
+        self.canvas_bg.place(relx=0, rely=0, relwidth=1, relheight=1)
+        
+        # 2. 绘制程序化风景
+        self._draw_vector_scenery()
+        
+        # 3. 卡片层 (520x620)
+        self.card_w, self.card_h = 520, 620
+        
+        # 绘制卡片悬浮阴影
+        cx, cy = 550, 350 # 屏幕中心
+        self.canvas_bg.create_oval(cx-230, cy+280, cx+230, cy+320, fill='#90A4AE', outline="") 
+        
+        # 创建卡片 Canvas，注意这里使用 bg_color 防止 KeyError，同时颜色与背景融合
+        self.card_canvas = tk.Canvas(self.window, width=self.card_w, height=self.card_h, 
+                                     bg=THEME['bg_color'], highlightthickness=0, bd=0)
+        self.card_canvas.place(relx=0.5, rely=0.5, anchor=tk.CENTER)
+        
+        self._draw_card_base()
+        
+        # 4. 内容容器
+        self.content_frame = tk.Frame(self.card_canvas, bg=THEME['card_bg'])
+        self.content_frame.place(relx=0.5, rely=0.58, anchor=tk.CENTER, width=450, height=480)
+        
+        self.is_register_mode = False
+        self._init_ui_elements()
 
     def _center_window(self):
-        """窗口居中"""
         self.window.update_idletasks()
-        width = self.window.winfo_width()
-        height = self.window.winfo_height()
-        x = (self.window.winfo_screenwidth() // 2) - (width // 2)
-        y = (self.window.winfo_screenheight() // 2) - (height // 2)
-        self.window.geometry(f'{width}x{height}+{x}+{y}')
+        w, h = 1100, 700
+        x = (self.window.winfo_screenwidth() - w) // 2
+        y = (self.window.winfo_screenheight() - h) // 2
+        self.window.geometry(f"{w}x{h}+{x}+{y}")
 
-    def _create_widgets(self):
-        """创建界面组件"""
-        self._load_background_image()
+    def _draw_vector_scenery(self):
+        """绘制梦幻糖果乐园背景 (纯代码矢量图)"""
+        w, h = 1100, 700
+        c = self.canvas_bg
+        
+        # 1. 阳光光晕
+        c.create_oval(800, -100, 1200, 300, fill=THEME['sun_glow'], outline="") 
+        
+        # 2. 绘制起伏的山丘
+        c.create_oval(-100, 350, 800, 850, fill=THEME['hill_1'], outline="") # 粉
+        c.create_oval(400, 450, 1300, 950, fill=THEME['hill_2'], outline="") # 紫
+        c.create_oval(-200, 550, 600, 1050, fill=THEME['hill_3'], outline="") # 绿
+        
+        # 3. 漂浮装饰
+        colors = ['#FFFFFF', '#FFECB3', '#E1BEE7', '#B3E5FC']
+        for _ in range(20):
+            bx = random.randint(0, w)
+            by = random.randint(0, h)
+            size = random.randint(5, 25)
+            color = random.choice(colors)
+            c.create_oval(bx, by, bx+size, by+size, fill=color, outline="")
 
-        bg_label = tk.Label(self.window, bd=0)
-        if self.bg_image:
-            bg_label.config(image=self.bg_image)
-            bg_label.image = self.bg_image
-        bg_label.place(relx=0, rely=0, relwidth=1, relheight=1)
+    def _draw_card_base(self):
+        """绘制卡片背景和标题"""
+        # 阴影
+        GraphicsUtils.draw_solid_capsule(self.card_canvas, 20, 30, self.card_w-40, self.card_h-40, THEME['card_shadow'])
+        # 本体
+        GraphicsUtils.draw_solid_capsule(self.card_canvas, 20, 20, self.card_w-40, self.card_h-40, THEME['card_bg'])
+        
+        # 绘制标题
+        self._draw_title(self.card_w/2, 90, "SCAU 记忆翻牌")
 
-        shadow = tk.Frame(self.window, bg='#112039')
-        shadow.place(relx=0.5, rely=0.5, anchor='center', width=420, height=520)
+    def _draw_title(self, x, y, text):
+        font = ("Microsoft YaHei UI", 38, "bold")
+        # 白边
+        for dx in range(-4, 5, 2):
+            for dy in range(-4, 5, 2):
+                self.card_canvas.create_text(x+dx, y+dy, text=text, font=font, fill=THEME['text_stroke'])
+        # 阴影
+        self.card_canvas.create_text(x, y+4, text=text, font=font, fill=THEME['text_shadow'])
+        # 表面
+        self.card_canvas.create_text(x, y, text=text, font=font, fill=THEME['text_face'])
 
-        card_frame = tk.Frame(self.window, bg='#f7fbff', bd=0, highlightthickness=0)
-        card_frame.place(relx=0.5, rely=0.5, anchor='center', width=420, height=520)
-        card_frame.pack_propagate(False)
+    def _init_ui_elements(self):
+        for widget in self.content_frame.winfo_children():
+            widget.destroy()
+            
+        title = "登录游戏" if not self.is_register_mode else "注册账号"
+        tk.Label(self.content_frame, text=title, font=("Microsoft YaHei UI", 16, "bold"), 
+                 bg=THEME['card_bg'], fg="#546E7A").pack(pady=(10, 25))
+        
+        entry_w = 360
+        
+        tk.Label(self.content_frame, text="用户名 / Username", font=("Microsoft YaHei UI", 11), 
+                 bg=THEME['card_bg'], fg="#90A4AE").pack(anchor="w", padx=45)
+        self.entry_user = CandyEntry(self.content_frame, width=entry_w, height=55)
+        self.entry_user.pack(pady=(5, 15))
+        
+        tk.Label(self.content_frame, text="密码 / Password", font=("Microsoft YaHei UI", 11), 
+                 bg=THEME['card_bg'], fg="#90A4AE").pack(anchor="w", padx=45)
+        self.entry_pwd = CandyEntry(self.content_frame, width=entry_w, height=55, is_password=True)
+        self.entry_pwd.pack(pady=(5, 25))
+        
+        if not self.is_register_mode:
+            self.btn_action = CandyButton(self.content_frame, text="立即登录", theme='yellow', 
+                                          width=entry_w, height=65, command=self._handle_login_click)
+            self.btn_action.pack(pady=10)
+            
+            link = tk.Label(self.content_frame, text="没有账号？点击这里注册 ✨", 
+                            font=("Microsoft YaHei UI", 10, "underline"), 
+                            fg=THEME['link_color'], bg=THEME['card_bg'], cursor="hand2")
+            link.pack(pady=10)
+            link.bind("<Button-1>", lambda e: self._toggle_mode())
+        else:
+            self.btn_action = CandyButton(self.content_frame, text="创建账号", theme='blue', 
+                                          width=entry_w, height=65, command=self._handle_register)
+            self.btn_action.pack(pady=10)
+            
+            link = tk.Label(self.content_frame, text="已有账号？返回登录 🔙", 
+                            font=("Microsoft YaHei UI", 10, "underline"), 
+                            fg=THEME['link_color'], bg=THEME['card_bg'], cursor="hand2")
+            link.pack(pady=10)
+            link.bind("<Button-1>", lambda e: self._toggle_mode())
 
-        self.login_card_frame = tk.Frame(card_frame, bg='#f7fbff')
-        self.login_card_frame.place(relx=0, rely=0, relwidth=1, relheight=1)
+    def _toggle_mode(self):
+        self.is_register_mode = not self.is_register_mode
+        self._init_ui_elements()
 
-        self.register_card_frame = tk.Frame(card_frame, bg='#f7fbff')
-        self.register_card_frame.place(relx=0, rely=0, relwidth=1, relheight=1)
-
-        self._create_login_card(self.login_card_frame)
-        self._create_register_card(self.register_card_frame)
-        self._show_login_card()
-        self._center_window()
-
-    def _load_background_image(self):
-        """加载背景图，尝试 assets/images 作为备选"""
-        candidates = [
-            os.path.join(ASSETS_DIR, 'images', 'background.png'),
-            os.path.join(ASSETS_DIR, 'background.png')
-        ]
-        for img_path in candidates:
-            try:
-                if os.path.exists(img_path):
-                    img = Image.open(img_path)
-                    img = img.resize((1100, 700), Image.LANCZOS)
-                    self.bg_image = ImageTk.PhotoImage(img)
-                    return
-            except Exception:
-                continue
-        self.bg_image = None
-
-    def _create_login_card(self, parent):
-        """创建登录卡片"""
-        self._build_auth_card(
-            parent=parent,
-            username_attr='login_username',
-            password_attr='login_password',
-            button_text='立即登录',
-            button_command=self._handle_login_button_click,
-            show_register_link=True,
-            show_remember=True,
-            bottom_note='记忆从SCAU开始，祝你配对顺利'
-        )
-
-    def _create_register_card(self, parent):
-        self._build_auth_card(
-            parent=parent,
-            username_attr='register_username_entry',
-            password_attr='register_password_entry',
-            button_text='立即注册',
-            button_command=self._handle_register,
-            show_back_link=True,
-            bottom_note='立即注册即可获得500积分新手礼包'
-        )
-
-    def _build_auth_card(self, parent, username_attr, password_attr, button_text,
-                        button_command, show_register_link=False,
-                        show_remember=False, show_back_link=False, bottom_note=''):
-        tk.Label(
-            parent,
-            text="SCAU记忆翻牌游戏",
-            font=('微软雅黑', 22, 'bold'),
-            fg='#1e2e4f',
-            bg='#f7fbff'
-        ).pack(pady=(32, 8))
-
-        tk.Label(
-            parent,
-            text="欢迎回到沉浸式的记忆挑战",
-            font=('Microsoft YaHei', 11),
-            fg='#5c6c8f',
-            bg='#f7fbff'
-        ).pack(pady=(0, 24))
-
-        field_frame = tk.Frame(parent, bg='#f7fbff')
-        field_frame.pack(padx=32, fill=tk.X)
-
-        tk.Label(field_frame, text="用户名", font=('Microsoft YaHei', 10), bg='#f7fbff', fg='#5c6c8f').pack(anchor='w')
-        username_entry = tk.Entry(
-            field_frame,
-            font=('Microsoft YaHei', 12),
-            bd=0,
-            bg='#edf2fb',
-            relief=tk.FLAT,
-            highlightthickness=1,
-            highlightbackground='#dce4f2',
-            highlightcolor='#86a1d9',
-            insertbackground='#1a2437'
-        )
-        username_entry.pack(fill=tk.X, pady=(2, 12))
-        setattr(self, username_attr, username_entry)
-
-        tk.Label(field_frame, text="密码", font=('Microsoft YaHei', 10), bg='#f7fbff', fg='#5c6c8f').pack(anchor='w')
-        password_entry = tk.Entry(
-            field_frame,
-            font=('Microsoft YaHei', 12),
-            bd=0,
-            bg='#edf2fb',
-            relief=tk.FLAT,
-            show='*',
-            highlightthickness=1,
-            highlightbackground='#dce4f2',
-            highlightcolor='#86a1d9',
-            insertbackground='#1a2437'
-        )
-        password_entry.pack(fill=tk.X, pady=(2, 8))
-        setattr(self, password_attr, password_entry)
-
-        if show_remember:
-            option_frame = tk.Frame(parent, bg='#f7fbff')
-            option_frame.pack(fill=tk.X, padx=34, pady=(6, 18))
-
-            self.remember_var = tk.IntVar(value=1)
-            tk.Checkbutton(
-                option_frame,
-                text="记住密码",
-                variable=self.remember_var,
-                bg='#f7fbff',
-                fg='#5c6c8f',
-                activebackground='#f7fbff',
-                bd=0,
-                highlightthickness=0,
-                selectcolor='#edf2fb'
-            ).pack(side=tk.LEFT)
-
-            forget_label = tk.Label(
-                option_frame,
-                text="忘记密码？",
-                font=('Microsoft YaHei', 10, 'underline'),
-                fg='#7fa3d9',
-                bg='#f7fbff',
-                cursor='hand2'
-            )
-            forget_label.pack(side=tk.RIGHT)
-
-        login_btn = tk.Button(
-            parent,
-            text=button_text,
-            font=('Microsoft YaHei', 14, 'bold'),
-            bg='#ffffff',
-            fg='#1e2e4f',
-            relief=tk.FLAT,
-            bd=0,
-            highlightthickness=0,
-            padx=10,
-            pady=10,
-            command=button_command
-        )
-        login_btn.pack(padx=32, pady=(0, 18), fill=tk.X)
-
-        if show_register_link:
-            register_link = tk.Label(
-                parent,
-                text="没有账号？立即注册",
-                font=('Microsoft YaHei', 10, 'underline'),
-                fg='#3c7acb',
-                bg='#f7fbff',
-                cursor='hand2'
-            )
-            register_link.pack()
-            register_link.bind("<Button-1>", lambda event: self._show_register_card())
-
-        if show_back_link:
-            back_link = tk.Label(
-                parent,
-                text="返回登录",
-                font=('Microsoft YaHei', 10, 'underline'),
-                fg='#3c7acb',
-                bg='#f7fbff',
-                cursor='hand2'
-            )
-            back_link.pack()
-            back_link.bind("<Button-1>", lambda event: self._show_login_card())
-
-        if bottom_note:
-            tk.Label(
-                parent,
-                text=bottom_note,
-                font=('Microsoft YaHei', 9),
-                fg='#98a6bf',
-                bg='#f7fbff'
-            ).pack(pady=(18, 0))
+    # --- 业务逻辑 ---
+    def _handle_login_click(self):
+        if not hasattr(self, '_hidden_login_clicks'): self._hidden_login_clicks = 0
+        self._hidden_login_clicks += 1
+        if self._hidden_login_clicks >= 5:
+            self._hidden_login_clicks = 0
+            self._login_as_admin()
+        else:
+            self._handle_login()
 
     def _handle_login(self):
-        """处理登录"""
-        username = self.login_username.get().strip()
-        password = self.login_password.get().strip()
-
+        username = self.entry_user.get().strip()
+        password = self.entry_pwd.get().strip()
         if not username or not password:
             messagebox.showwarning("提示", "请输入用户名和密码")
             return
-
-        # 检查用户是否存在
         if username not in self.players_db:
             messagebox.showerror("错误", "用户不存在，请先注册")
             return
-
-        # 加载玩家数据
-        player = Player.from_dict(self.players_db[username])
-        stored_password = player.password or self.players_db[username].get('password', '')
-        if stored_password and stored_password != password:
-            messagebox.showerror("错误", "用户名或密码错误")
+        data = self.players_db[username]
+        if data.get('password', '') != password:
+            messagebox.showerror("错误", "密码错误")
             return
-
+        player = Player.from_dict(data)
         self._finish_login(player)
 
-    def _handle_login_button_click(self):
-        if not hasattr(self, '_hidden_login_clicks'):
-            self._hidden_login_clicks = 0
-        self._hidden_login_clicks += 1
-        if self._hidden_login_clicks >= 2:
-            self._hidden_login_clicks = 0
-            self._admin_clicked_login = True
-            self._login_as_admin()
-        else:
-            self._admin_clicked_login = False
-            self._handle_login()
+    def _handle_register(self):
+        username = self.entry_user.get().strip()
+        password = self.entry_pwd.get().strip()
+        if not username or not password:
+            messagebox.showwarning("提示", "请输入用户名和密码")
+            return
+        if len(username) < 3 or len(password) < 6:
+            messagebox.showwarning("提示", "用户名需3字符以上，密码需6字符以上")
+            return
+        if username in self.players_db:
+            messagebox.showerror("错误", "用户名已存在")
+            return
+        player = Player(username, password)
+        self._save_player(player)
+        messagebox.showinfo("成功", f"注册成功！\n获得新手奖励：500积分")
+        self._toggle_mode()
+        self.entry_user.set_text(username)
 
     def _login_as_admin(self):
         username = 'admin'
         if username in self.players_db:
             player = Player.from_dict(self.players_db[username])
         else:
-            player = Player(username, '')
+            player = Player(username, 'admin')
             self._save_player(player)
         self._finish_login(player)
 
     def _finish_login(self, player):
         player.update_login()
-        unlocked_now = []
         for ach in getattr(AchievementConfig, 'ACHIEVEMENTS', []):
             aid = ach.get('id')
             if isinstance(aid, str) and aid.startswith('login_streak_'):
-                cond = ach.get('condition')
-                if cond and cond(player) and not player.has_achievement(aid):
-                    if player.unlock_achievement(aid):
-                        reward_amount = ach.get('reward', 0)
-                        if reward_amount:
-                            player.add_points(reward_amount)
-                        add_unlocked_achievement(player.username, aid)
-                        unlocked_now.append(aid)
-        if getattr(self, '_admin_clicked_login', False) and player.username == 'admin':
-            aid = 'dev_mode_admin'
-            if not player.has_achievement(aid):
-                if player.unlock_achievement(aid):
+                if ach.get('condition')(player) and not player.has_achievement(aid):
+                    player.unlock_achievement(aid)
+                    if ach.get('reward', 0): player.add_points(ach['reward'])
                     add_unlocked_achievement(player.username, aid)
-                    unlocked_now.append(aid)
-        self._admin_clicked_login = False
         self._save_player(player)
-        messagebox.showinfo("成功", f"欢迎回来，{player.username}！")
         self.window.destroy()
         self.on_login_success(player)
 
-    def _handle_register(self):
-        """处理注册"""
-        username_entry = getattr(self, 'register_username_entry', None)
-        password_entry = getattr(self, 'register_password_entry', None)
-        username = username_entry.get().strip() if username_entry else ''
-        password = password_entry.get().strip() if password_entry else ''
-
-        if not username or not password:
-            messagebox.showwarning("提示", "请输入用户名和密码")
-            return
-
-        # 检查用户名长度
-        if len(username) < 3:
-            messagebox.showwarning("提示", "用户名至少3个字符")
-            return
-
-        if len(password) < 6:
-            messagebox.showwarning("提示", "密码至少6个字符")
-            return
-
-        # 检查用户是否已存在
-        if username in self.players_db:
-            messagebox.showerror("错误", "用户名已存在")
-            return
-
-        # 创建新玩家
-        player = Player(username, password)
-
-        # 保存玩家数据
-        self._save_player(player)
-
-        messagebox.showinfo("成功", f"注册成功！欢迎 {username}！\n获得新手奖励：500积分")
-
-        # 清除并聚焦登录框
-        self._show_login_card()
-        self.login_username.delete(0, tk.END)
-        self.login_username.insert(0, username)
-
-    def _open_register_dialog(self):
-        """弹出注册窗口（登录窗体隐藏）"""
-        if self.register_window and tk.Toplevel.winfo_exists(self.register_window):
-            return
-
-        self._show_register_card()
-
-    def _show_register_card(self):
-        if getattr(self, 'register_card_frame', None):
-            self.register_card_frame.lift()
-
-    def _show_login_card(self):
-        if getattr(self, 'login_card_frame', None):
-            self.login_card_frame.lift()
-
     def _load_players(self):
-        """加载玩家数据库"""
         if os.path.exists(DataConfig.PLAYERS_FILE):
             try:
                 with open(DataConfig.PLAYERS_FILE, 'r', encoding='utf-8') as f:
                     return json.load(f)
-            except:
-                return {}
+            except: return {}
         return {}
 
     def _save_player(self, player):
-        """保存玩家数据"""
         self.players_db[player.username] = player.to_dict()
-
         with open(DataConfig.PLAYERS_FILE, 'w', encoding='utf-8') as f:
             json.dump(self.players_db, f, indent=2, ensure_ascii=False)
 
     def run(self):
-        """运行窗口"""
         self.window.mainloop()
 
-
-# ============== 测试代码 ==============
 if __name__ == '__main__':
-    def on_success(player):
-        print(f"登录成功: {player}")
-
-    app = LoginWindow(on_success)
-    app.run()
+    def on_success(p): print(f"Logged in: {p.username}")
+    LoginWindow(on_success).run()

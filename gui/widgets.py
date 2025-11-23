@@ -96,6 +96,34 @@ class PlayingCard(tk.Canvas):
         self.create_line(cx, cy-icon_sz+5, cx+icon_sz, cy-size, fill=color, width=3, capstyle=tk.ROUND, tags=('card',))
 
     # --- 渲染逻辑 ---
+    def _pip_layout(self):
+        center = 0.5
+        top = 0.2
+        bot = 0.8
+        mid = 0.5
+        upper = 0.35
+        lower = 0.65
+        left = 0.25
+        right = 0.75
+        return {
+            '2': [(center, top), (center, bot)],
+            '3': [(center, top), (center, mid), (center, bot)],
+            '4': [(left, top), (right, top), (left, bot), (right, bot)],
+            '5': [(left, top), (right, top), (center, mid), (left, bot), (right, bot)],
+            '6': [(left, top), (right, top), (left, mid), (right, mid), (left, bot), (right, bot)],
+            '7': [(left, top), (right, top), (left, mid), (right, mid), (left, bot), (right, bot), (center, upper)],
+            '8': [(left, top), (right, top), (left, mid), (right, mid), (left, bot), (right, bot), (center, upper), (center, lower)],
+            '9': [(left, top), (right, top), (left, mid), (right, mid), (left, bot), (right, bot), (center, upper), (center, lower), (center, mid)],
+            '10': [(left, top), (right, top), (left, upper), (right, upper), (left, lower), (right, lower), (left, bot), (right, bot), (center, upper), (center, lower)]
+        }
+
+    def _draw_pips(self, positions, col, x_offset, y_offset, w, h, scale):
+        pip_font = (UIConfig.FONTS['card_corner'][0], max(10, int(h * 0.11 * scale)), 'bold')
+        for x_rel, y_rel in positions:
+            x = x_offset + w * x_rel
+            y = y_offset + h * y_rel
+            self.create_text(x, y, text=self._suit, fill=col, font=pip_font, tags=('card',))
+
     def _render_current(self, scale=1.0):
         if self._front:
             self._render_front(scale)
@@ -161,6 +189,7 @@ class PlayingCard(tk.Canvas):
             return
 
         col = PokerConfig.suit_color(self._suit)
+        pip_layouts = self._pip_layout()
         
         # ============== 关键调整区域 ==============
         
@@ -183,10 +212,6 @@ class PlayingCard(tk.Canvas):
         self.create_text(tl_x, tl_y,
                          text=self._rank,
                          fill=col, font=font_corner, anchor=tk.N, tags=('card',))
-        # 花色
-        self.create_text(tl_x, tl_y + corner_font_size * 0.95,
-                         text=self._suit,
-                         fill=col, font=font_corner, anchor=tk.N, tags=('card',))
 
         # --- 右下角 (Bottom-Right) ---
         br_x = x_offset + w - safe_margin_x
@@ -197,15 +222,8 @@ class PlayingCard(tk.Canvas):
             # 之前的 anchor=tk.S 在旋转180度后会导致文字向下画（画出屏幕）
             # 改为 anchor=tk.N (北)，旋转180度后，文字会"向上"画（画进卡牌里）
             
-            # 倒置的花色 (最靠下)
+            # 倒置的数字 (最靠下)
             self.create_text(br_x, br_y,
-                             text=self._suit,
-                             fill=col, font=font_corner, 
-                             anchor=tk.N, angle=180, tags=('card',)) # 改为 N
-            
-            # 倒置的点数 (花色上面)
-            # 注意：因为是向"上"画，所以Y坐标要减去花色的高度偏移
-            self.create_text(br_x, br_y - corner_font_size * 0.95,
                              text=self._rank,
                              fill=col, font=font_corner, 
                              anchor=tk.N, angle=180, tags=('card',)) # 改为 N
@@ -214,10 +232,6 @@ class PlayingCard(tk.Canvas):
             # Fallback (不支持旋转时的备选方案)
             # 正常堆叠在右下角
             self.create_text(br_x, br_y,
-                             text=self._suit,
-                             fill=col, font=font_corner, anchor=tk.SE, tags=('card',))
-            
-            self.create_text(br_x, br_y - corner_font_size,
                              text=self._rank,
                              fill=col, font=font_corner, anchor=tk.SE, tags=('card',))
 
@@ -231,7 +245,11 @@ class PlayingCard(tk.Canvas):
             text_content = self._rank if self._rank in ['J', 'Q', 'K'] else self._suit
             self.create_text(cx, cy, text=text_content, fill=col, font=font_main, tags=('card',))
         else:
-            self.create_text(cx, cy, text=self._suit, fill=col, font=font_main, tags=('card',))
+            layout = pip_layouts.get(self._rank)
+            if layout:
+                self._draw_pips(layout, col, x_offset, y_offset, w, h, scale)
+            else:
+                self.create_text(cx, cy, text=self._suit, fill=col, font=font_main, tags=('card',))
 
         self._front = True
 

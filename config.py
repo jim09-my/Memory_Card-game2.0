@@ -44,7 +44,7 @@ class ItemConfig:
     ITEMS = {
         'hint': {'name': '透视眼', 'description': '偷看一对卡牌', 'price': 200, 'icon': '👁️', 'effect_value': 1},
         'time_extend': {'name': '时间胶囊', 'description': '延长30秒', 'price': 300, 'icon': '⏳', 'effect_value': 30},
-        'shuffle_prevent': {'name': '定身术', 'description': '防止洗牌', 'price': 400, 'icon': '🛡️', 'effect_value': 1},
+        'shuffle_prevent': {'name': '防洗牌护盾', 'description': '阻止一次洗牌（仅洗牌模式）', 'price': 400, 'icon': '🛡️', 'effect_value': 1},
         'undo': {'name': '时光倒流', 'description': '撤销一步', 'price': 250, 'icon': '↩️', 'effect_value': 1}
     }
 

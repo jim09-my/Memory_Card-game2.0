@@ -43,6 +43,9 @@ class Game:
         self.shuffle_failures = 0
         self.shuffle_status = None
         self.pending_shuffle_prevention = False
+        self.consecutive_failures = 0  # 连续失败次数
+        self.shuffle_prevent_active = False  # 防洗牌道具是否激活
+        self.shuffle_warning_shown = False  # 是否已显示洗牌警告
         self.last_pair = None
         self.last_match = None
         self.flipped_cards = []
@@ -90,6 +93,9 @@ class Game:
         self.moves = 0
         self.score = 0
         self.mistakes = 0
+        self.consecutive_failures = 0
+        self.shuffle_prevent_active = False
+        self.shuffle_warning_shown = False
         self.is_started = True
         self.is_completed = False
         self.is_failed = False
@@ -167,6 +173,9 @@ class Game:
             card2.match()
             self.matched_pairs += 1
             self.score += 10
+            # 重置连续失败计数
+            self.consecutive_failures = 0
+            self.shuffle_warning_shown = False
 
             print(f"OK 配对成功！已完成 {self.matched_pairs}/{self.get_total_pairs()}")
             
@@ -177,7 +186,12 @@ class Game:
             # 匹配失败
             self.mistakes += 1
             self.score = max(0, self.score - 1)
-            print(f"X 配对失败")
+            self.consecutive_failures += 1
+            print(f"X 配对失败 (连续失败: {self.consecutive_failures}次)")
+            
+            # 检查是否需要触发洗牌（仅在9×4模式且启用洗牌时）
+            if self.mode == 'ultimate_shuffle' and self.shuffle_enabled:
+                self._check_shuffle_trigger()
 
         self.last_pair = pair
         self.last_match = match
@@ -309,8 +323,44 @@ class Game:
         print(f"⏰ 时间延长 {seconds} 秒")
         return True
 
+    def _check_shuffle_trigger(self):
+        """
+        检查是否需要触发洗牌
+        在9×4模式下，连续失败4次会触发洗牌
+        """
+        # 洗牌触发阈值：4次连续失败（符合人的大脑规律）
+        SHUFFLE_THRESHOLD = 4
+        
+        # 如果防洗牌道具激活，不触发洗牌
+        if self.shuffle_prevent_active:
+            print("🛡️ 防洗牌道具激活，洗牌被阻止")
+            # 消耗防洗牌道具（一次性使用）
+            self.shuffle_prevent_active = False
+            return False
+        
+        # 检查是否达到阈值
+        if self.consecutive_failures >= SHUFFLE_THRESHOLD:
+            # 触发洗牌
+            print(f"⚠️ 连续失败{self.consecutive_failures}次，触发洗牌！")
+            if self.shuffle_cards():
+                # 重置连续失败计数
+                self.consecutive_failures = 0
+                self.shuffle_warning_shown = False
+                return True
+        elif self.consecutive_failures == SHUFFLE_THRESHOLD - 1:
+            # 即将触发洗牌，设置警告标志
+            self.shuffle_warning_shown = True
+            print(f"⚠️ 警告：再失败1次将触发洗牌！")
+        
+        return False
+    
     def shuffle_cards(self):
         """洗牌"""
+        # 如果防洗牌道具激活，阻止洗牌
+        if self.shuffle_prevent_active:
+            print("🛡️ 防洗牌道具激活，洗牌被阻止")
+            return False
+        
         # 获取未匹配的卡牌
         unmatched_cards = [card for card in self.cards if not card.is_matched]
 
@@ -329,9 +379,47 @@ class Game:
 
         # 清空翻开的卡牌
         self.flipped_cards = []
+        # 重置resolving_pair状态，防止卡住
+        self.resolving_pair = False
 
         print("🔀 卡牌已洗牌")
         return True
+    
+    def activate_shuffle_prevent(self):
+        """
+        激活防洗牌道具
+        在洗牌模式下，防止下一次洗牌触发
+        """
+        if not self.shuffle_enabled:
+            print("当前模式未启用洗牌功能")
+            return False
+        
+        # 检查玩家是否有防洗牌道具
+        if self.player and not self.player.has_item('shuffle_prevent'):
+            print("没有防洗牌道具")
+            return False
+        
+        # 激活防洗牌
+        self.shuffle_prevent_active = True
+        
+        # 使用道具
+        if self.player:
+            self.player.use_item('shuffle_prevent')
+            self.items_used['shuffle_prevent'] += 1
+        
+        print("🛡️ 防洗牌道具已激活")
+        return True
+    
+    def get_shuffle_warning(self):
+        """
+        获取洗牌警告状态
+        返回：是否需要显示警告，以及剩余失败次数
+        """
+        SHUFFLE_THRESHOLD = 4
+        if self.shuffle_enabled and self.consecutive_failures >= SHUFFLE_THRESHOLD - 1:
+            remaining = SHUFFLE_THRESHOLD - self.consecutive_failures
+            return True, remaining
+        return False, 0
 
     def pause_game(self):
         """暂停游戏"""
