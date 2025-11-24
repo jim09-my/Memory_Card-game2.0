@@ -6,5 +6,305 @@
       "description": "完成第一场游戏",
       "category": "入门",
       "reward": 100,
-      "icon": "🎮",
-      "condition": 
+      "icon": "🎮"
+    },
+    {
+      "id": "normal_master",
+      "name": "普通大师",
+      "description": "普通模式通关10次",
+      "category": "入门",
+      "reward": 300,
+      "icon": "🏆"
+    },
+    {
+      "id": "ultimate_conqueror",
+      "name": "终极征服者",
+      "description": "终极模式通关5次",
+      "category": "挑战",
+      "reward": 800,
+      "icon": "👑"
+    },
+    {
+      "id": "persistent_50",
+      "name": "毅力十足",
+      "description": "累计游玩50局",
+      "category": "成长",
+      "reward": 200,
+      "icon": "🔁"
+    },
+    {
+      "id": "item_user_10",
+      "name": "工具达人",
+      "description": "累计使用道具10次",
+      "category": "活跃",
+      "reward": 150,
+      "icon": "🧰"
+    },
+    {
+      "id": "no_item_10",
+      "name": "清心寡欲",
+      "description": "无道具通关10次",
+      "category": "技术",
+      "reward": 500,
+      "icon": "🚫"
+    },
+    {
+      "id": "win_streak_3",
+      "name": "连胜三场",
+      "description": "连续通关3场",
+      "category": "连胜",
+      "reward": 200,
+      "icon": "💥"
+    },
+    {
+      "id": "win_streak_5",
+      "name": "势不可挡",
+      "description": "连续通关5场",
+      "category": "连胜",
+      "reward": 400,
+      "icon": "⚡"
+    },
+    {
+      "id": "login_streak_3",
+      "name": "活跃签到·3",
+      "description": "连续登录3天",
+      "category": "活跃",
+      "reward": 200,
+      "icon": "📅"
+    },
+    {
+      "id": "login_streak_7",
+      "name": "活跃签到·7",
+      "description": "连续登录7天",
+      "category": "活跃",
+      "reward": 500,
+      "icon": "📆"
+    },
+    {
+      "id": "first_win",
+      "name": "首胜加冕",
+      "description": "首次通关任意模式",
+      "category": "入门",
+      "reward": 50,
+      "icon": "🥇"
+    },
+    {
+      "id": "first_ultimate_win",
+      "name": "初试终极",
+      "description": "首次通关终极模式",
+      "category": "入门",
+      "reward": 75,
+      "icon": "🧗"
+    },
+    {
+      "id": "first_item_use",
+      "name": "初用道具",
+      "description": "首次使用任意道具",
+      "category": "入门",
+      "reward": 10,
+      "icon": "🧰"
+    },
+    {
+      "id": "record_break_normal",
+      "name": "打破个人纪录",
+      "description": "刷新普通模式个人最佳用时",
+      "category": "入门",
+      "reward": 100,
+      "icon": "⏱️"
+    },
+    {
+      "id": "persistent_100",
+      "name": "百战不殆",
+      "description": "累计游玩100局",
+      "category": "成长",
+      "reward": 300,
+      "icon": "📈"
+    },
+    {
+      "id": "points_5000",
+      "name": "千分达人",
+      "description": "累计获得积分达到5000",
+      "category": "成长",
+      "reward": 500,
+      "icon": "💎"
+    },
+    {
+      "id": "normal_master_30",
+      "name": "普通老练",
+      "description": "普通模式通关30次",
+      "category": "成长",
+      "reward": 300,
+      "icon": "🏆"
+    },
+    {
+      "id": "ultimate_conqueror_30",
+      "name": "终极精进",
+      "description": "终极模式通关30次",
+      "category": "成长",
+      "reward": 1000,
+      "icon": "👑"
+    },
+    {
+      "id": "login_total_30",
+      "name": "常回家看看",
+      "description": "累计登录天数30（非连续）",
+      "category": "成长",
+      "reward": 300,
+      "icon": "📅"
+    },
+    {
+      "id": "item_user_50",
+      "name": "道具达人",
+      "description": "累计使用道具50次",
+      "category": "成长",
+      "reward": 500,
+      "icon": "🧰"
+    },
+    {
+      "id": "flawless_normal",
+      "name": "零失误·普通",
+      "description": "普通模式失误数为0通关",
+      "category": "技术",
+      "reward": 666,
+      "icon": "🧠"
+    },
+    {
+      "id": "flawless_ultimate",
+      "name": "零失误·终极",
+      "description": "终极模式失误数为0通关",
+      "category": "技术",
+      "reward": 6666,
+      "icon": "🧠"
+    },
+    {
+      "id": "speedrunner_normal_45",
+      "name": "速通·普通",
+      "description": "普通模式45秒内通关",
+      "category": "技术",
+      "reward": 300,
+      "icon": "⚡"
+    },
+    {
+      "id": "speedrunner_ultimate_80",
+      "name": "速通·终极",
+      "description": "终极模式80秒内通关",
+      "category": "技术",
+      "reward": 600,
+      "icon": "⚡"
+    },
+    {
+      "id": "low_moves_normal_32",
+      "name": "省步高手",
+      "description": "普通模式通关步数<=32",
+      "category": "技术",
+      "reward": 320,
+      "icon": "🪜"
+    },
+    {
+      "id": "no_undo_20",
+      "name": "撤销？没什么用",
+      "description": "累计20次在不用撤销的情况下通关",
+      "category": "技术",
+      "reward": 400,
+      "icon": "↩️"
+    },
+    {
+      "id": "perfect_combo_normal_50",
+      "name": "无双·普通",
+      "description": "普通模式零失误且≤50秒通关",
+      "category": "技术",
+      "reward": 666,
+      "icon": "🎯"
+    },
+    {
+      "id": "perfect_combo_ultimate_100",
+      "name": "无双·终极",
+      "description": "终极模式零失误且≤100秒通关",
+      "category": "技术",
+      "reward": 6666,
+      "icon": "🎯"
+    },
+    {
+      "id": "ultimate_no_item_5",
+      "name": "终极无道具5",
+      "description": "终极模式无道具通关5次",
+      "category": "技术",
+      "reward": 1200,
+      "icon": "🏅"
+    },
+    {
+      "id": "win_streak_7",
+      "name": "七连胜",
+      "description": "连续通关7场",
+      "category": "连胜",
+      "reward": 600,
+      "icon": "💥"
+    },
+    {
+      "id": "win_streak_10",
+      "name": "十连胜",
+      "description": "连续通关10场",
+      "category": "连胜",
+      "reward": 1000,
+      "icon": "🔥"
+    },
+    {
+      "id": "ultimate_streak_10",
+      "name": "终极十连",
+      "description": "终极模式连续通关10场",
+      "category": "连胜",
+      "reward": 800,
+      "icon": "⚡"
+    },
+    {
+      "id": "no_item_streak_10",
+      "name": "无道具十连",
+      "description": "无道具连续通关10场",
+      "category": "连胜",
+      "reward": 500,
+      "icon": "🛡️"
+    },
+    {
+      "id": "login_streak_14",
+      "name": "活跃签到·14",
+      "description": "连续登录14天",
+      "category": "活跃",
+      "reward": 600,
+      "icon": "📅"
+    },
+    {
+      "id": "login_streak_30",
+      "name": "活跃签到·30",
+      "description": "连续登录30天",
+      "category": "活跃",
+      "reward": 1200,
+      "icon": "📆"
+    },
+    {
+      "id": "daily_ten_plays",
+      "name": "每日十局",
+      "description": "单日完成10局",
+      "category": "活跃",
+      "reward": 200,
+      "icon": "📈"
+    },
+    {
+      "id": "tool_variety_day_4",
+      "name": "工具全能",
+      "description": "单日四种道具各至少使用一次",
+      "category": "活跃",
+      "reward": 50,
+      "icon": "🧩"
+    },
+    {
+      "id": "dev_mode_admin",
+      "name": "误闯天家",
+      "description": "进入开发者模式",
+      "category": null,
+      "reward": 0,
+      "hidden": true,
+      "icon": "🗝️"
+    }
+  ],
+  "unlocked": {}
+}

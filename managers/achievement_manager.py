@@ -14,21 +14,34 @@ class AchievementManager:
 
     def load(self):
         data = load_achievements()
-        # 支持两种格式：旧版直接是列表，新版是 {definitions: [], unlocked: {}}
         if not data:
             defs = AchievementConfig.ACHIEVEMENTS if hasattr(AchievementConfig, 'ACHIEVEMENTS') else []
-            # 写入标准化格式
-            save_achievements({'definitions': defs, 'unlocked': {}})
+            serializable_defs = [{k: v for k, v in a.items() if k != 'condition'} for a in defs]
+            save_achievements({'definitions': serializable_defs, 'unlocked': {}})
             self._achievements = defs
             return self._achievements
 
         if isinstance(data, dict):
             defs = data.get('definitions', [])
+            if not defs:
+                defs = AchievementConfig.ACHIEVEMENTS if hasattr(AchievementConfig, 'ACHIEVEMENTS') else []
+                serializable_defs = [{k: v for k, v in a.items() if k != 'condition'} for a in defs]
+                save_achievements({'definitions': serializable_defs, 'unlocked': data.get('unlocked', {})})
+            else:
+                serializable_defs = [{k: v for k, v in a.items() if k != 'condition'} for a in defs]
+                try:
+                    save_achievements({'definitions': serializable_defs, 'unlocked': data.get('unlocked', {})})
+                except Exception:
+                    pass
             self._achievements = defs
             return self._achievements
 
-        # 兼容旧版 list 格式
         self._achievements = data
+        try:
+            serializable_defs = [{k: v for k, v in a.items() if k != 'condition'} for a in data]
+            save_achievements({'definitions': serializable_defs, 'unlocked': {}})
+        except Exception:
+            pass
         return self._achievements
 
     def get_all(self):
@@ -41,7 +54,6 @@ class AchievementManager:
         return None
 
     def save(self):
-        # 保存为标准化结构：{definitions: [...], unlocked: {...}}
         try:
             existing = load_achievements()
             unlocked = {}
@@ -49,4 +61,5 @@ class AchievementManager:
                 unlocked = existing.get('unlocked', {})
         except Exception:
             unlocked = {}
-        save_achievements({'definitions': self._achievements, 'unlocked': unlocked})
+        serializable_defs = [{k: v for k, v in a.items() if k != 'condition'} for a in (self._achievements or [])]
+        save_achievements({'definitions': serializable_defs, 'unlocked': unlocked})

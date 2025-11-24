@@ -323,6 +323,21 @@ class Game:
         print(f"⏰ 时间延长 {seconds} 秒")
         return True
 
+    def activate_shuffle_prevent(self):
+        if not self.is_started or self.is_completed:
+            return False
+        if not self.shuffle_enabled:
+            return False
+        if self.player and not self.player.has_item('shuffle_prevent'):
+            return False
+        self.shuffle_prevent_active = True
+        self.consecutive_failures = 0
+        self.shuffle_warning_shown = False
+        if self.player:
+            self.player.use_item('shuffle_prevent')
+            self.items_used['shuffle_prevent'] += 1
+        return True
+
     def _check_shuffle_trigger(self):
         """
         检查是否需要触发洗牌

@@ -34,3 +34,17 @@ for s in scenarios:
     print('shuffle_status:', getattr(g, 'shuffle_status', None))
 
 print('\n测试结束')
+print('\n测试防洗牌护盾使用后清零连续失败')
+from core.player import Player
+p = Player('tester')
+p.add_item('shuffle_prevent', 1)
+g = Game(mode='ultimate_shuffle', player=p)
+g.start_game()
+g.consecutive_failures = 5
+print('使用前:', 'consecutive_failures=', g.consecutive_failures)
+activated = g.activate_shuffle_prevent()
+print('激活结果:', activated)
+print('使用后:', 'consecutive_failures=', g.consecutive_failures, 'shield_active=', g.shuffle_prevent_active, 'items_used=', g.items_used['shuffle_prevent'])
+g.consecutive_failures = 7
+blocked = g._check_shuffle_trigger()
+print('下一次洗牌是否被阻止:', not blocked, 'shield_active_now=', g.shuffle_prevent_active)

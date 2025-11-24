@@ -517,7 +517,7 @@
     "username": "admin",
     "email": "",
     "password": "123456",
-    "points": 740,
+    "points": 90,
     "level": 3,
     "experience": 0,
     "total_points_earned": 2540,
@@ -540,7 +540,7 @@
       "win_streak_5"
     ],
     "created_at": 1763647736.8366134,
-    "last_login": 1763973590.8756008,
+    "last_login": 1763977564.8495226,
     "consecutive_days": 5,
     "game_records": [
       {
