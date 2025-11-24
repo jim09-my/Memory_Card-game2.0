@@ -448,7 +448,10 @@ class CareerWindow:
             if c >= 3: c=0; r+=1
 
     def _fmt_time(self, s):
-        return f"{int(s)}s" if s else "--"
+        if s is None:
+            return "--"
+        return f"{int(s)}s"
+
 
     def _ach_progress(self, a):
         aid = a.get('id')

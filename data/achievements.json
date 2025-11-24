@@ -306,5 +306,15 @@
       "icon": "🗝️"
     }
   ],
-  "unlocked": {}
+  "unlocked": {
+    "root": [
+      "first_game",
+      "first_win",
+      "first_item_use"
+    ],
+    "1234": [
+      "win_streak_10",
+      "no_item_streak_10"
+    ]
+  }
 }

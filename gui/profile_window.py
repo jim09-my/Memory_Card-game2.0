@@ -103,5 +103,6 @@ class ProfileWindow:
                 r += 1
     
     def _fmt_time(self, s):
-        if not s: return "--"
+        if s is None:
+            return "--"
         return f"{int(s)}s"

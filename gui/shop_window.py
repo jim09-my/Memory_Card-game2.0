@@ -6,7 +6,6 @@ from managers.data_manager import save_player
 
 # --- 辅助：圆角绘制工具 ---
 def draw_rounded_rect(canvas, x, y, w, h, r, fill, outline=""):
-    # 绘制圆角矩形路径
     canvas.create_arc(x, y, x+2*r, y+2*r, start=90, extent=90, fill=fill, outline=outline)
     canvas.create_arc(x+w-2*r, y, x+w, y+2*r, start=0, extent=90, fill=fill, outline=outline)
     canvas.create_arc(x+w-2*r, y+h-2*r, x+w, y+h, start=270, extent=90, fill=fill, outline=outline)
@@ -44,7 +43,6 @@ class FlatBuyButton(tk.Canvas):
         x2, y2 = cx + w/2, cy + h/2
         col = '#FFF176' if self._state == 'hover' else self.bg_color
         
-        # 绘制胶囊形状
         self.create_arc(x1, y1, x1+2*r, y1+2*r, start=90, extent=180, fill=col, outline="")
         self.create_arc(x2-2*r, y1, x2, y1+2*r, start=270, extent=180, fill=col, outline="")
         self.create_rectangle(x1+r, y1, x2-r, y2+1, fill=col, outline="")
@@ -145,12 +143,10 @@ class ShopWindow:
         row_count = 0
         
         for item_id, item in items.items():
-            # 使用 Canvas 绘制圆角卡片背景
             card_w, card_h = 180, 190
             card = tk.Canvas(self.scrollable_frame, bg='#E0F7FA', width=card_w, height=card_h, highlightthickness=0)
             card.grid(row=row_count, column=col_count, padx=15, pady=15)
             
-            # 绘制白色圆角矩形
             draw_rounded_rect(card, 0, 0, card_w, card_h, 20, fill='white', outline="")
             
             content = tk.Frame(card, bg='white')
@@ -179,7 +175,12 @@ class ShopWindow:
     def _purchase(self, item_id):
         success, msg = self.shop_manager.purchase_item(self.player, item_id)
         if success:
-            messagebox.showinfo("成功", f"购买成功！\n{msg}")
+        # ★ 新增：获取道具名字 ★
+            item_name = (self.shop_manager.get_items() or ItemConfig.ITEMS)[item_id]["name"]
+
+        # ★ 修改提示框文本 ★
+            messagebox.showinfo("成功", f"{item_name}\n购买成功！")
+
             save_player(self.player)
             self._update_ui()
         else:

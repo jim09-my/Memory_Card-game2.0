@@ -464,5 +464,77 @@
       "undo": 0
     },
     "timestamp": 1763973310
+  },
+  {
+    "mode": "normal",
+    "grid_size": 4,
+    "username": "1234",
+    "completed": true,
+    "time_used": 44,
+    "moves": 29,
+    "mistakes": 21,
+    "score": 64,
+    "reward": 195,
+    "items_used": {
+      "hint": 0,
+      "time_extend": 0,
+      "shuffle_prevent": 0,
+      "undo": 0
+    },
+    "timestamp": 1763993444
+  },
+  {
+    "mode": "ultimate_shuffle",
+    "grid_size": 6,
+    "username": "root",
+    "completed": true,
+    "time_used": 155,
+    "moves": 100,
+    "mistakes": 82,
+    "score": 105,
+    "reward": 790,
+    "items_used": {
+      "hint": 4,
+      "time_extend": 0,
+      "shuffle_prevent": 0,
+      "undo": 3
+    },
+    "timestamp": 1763994915
+  },
+  {
+    "mode": "normal",
+    "grid_size": 4,
+    "username": "1234",
+    "completed": true,
+    "time_used": 23,
+    "moves": 16,
+    "mistakes": 8,
+    "score": 74,
+    "reward": 260,
+    "items_used": {
+      "hint": 0,
+      "time_extend": 0,
+      "shuffle_prevent": 0,
+      "undo": 0
+    },
+    "timestamp": 1763997503
+  },
+  {
+    "mode": "normal",
+    "grid_size": 4,
+    "username": "1234",
+    "completed": true,
+    "time_used": 45,
+    "moves": 26,
+    "mistakes": 18,
+    "score": 66,
+    "reward": 210,
+    "items_used": {
+      "hint": 0,
+      "time_extend": 0,
+      "shuffle_prevent": 0,
+      "undo": 0
+    },
+    "timestamp": 1763997627
   }
 ]

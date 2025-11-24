@@ -195,14 +195,11 @@ class Player:
         return achievement_id in self.achievements
 
     def add_game_record(self, record):
-        """
-        添加游戏记录
-        :param record: 游戏记录字典
-        """
+
         record['timestamp'] = time.time()
         self.game_records.append(record)
 
-        # 更新统计
+    # 更新统计
         self.total_games += 1
         if record.get('completed'):
             self.completed_games += 1
@@ -210,28 +207,33 @@ class Player:
         self.total_moves += record.get('moves', 0)
         self.total_time += record.get('time_used', 0)
 
-        # 更新最佳成绩
+    # 更新最佳成绩
         if record.get('completed'):
             mode = record.get('mode')
             time_used = record.get('time_used', 0)
 
-            if mode == 'normal':
-                if self.best_time_normal is None or time_used < self.best_time_normal:
-                    self.best_time_normal = time_used
-                    print(f"🎉 打破普通模式记录: {time_used}秒")
-            elif mode == 'ultimate':
-                if self.best_time_ultimate is None or time_used < self.best_time_ultimate:
-                    self.best_time_ultimate = time_used
-                    print(f"🎉 打破终极模式记录: {time_used}秒")
+        # ★ 修复点：time_used 必须 > 0 才能作为有效记录
+            if time_used > 0:
+                if mode == 'normal':
+                    if self.best_time_normal is None or time_used < self.best_time_normal:
+                        self.best_time_normal = time_used
+                        print(f"🎉 打破普通模式记录: {time_used}秒")
 
-        # 保持最近50条记录
+                elif mode == 'ultimate':
+                    if self.best_time_ultimate is None or time_used < self.best_time_ultimate:
+                        self.best_time_ultimate = time_used
+                        print(f"🎉 打破终极模式记录: {time_used}秒")
+
+    # 保持最近50条记录
         if len(self.game_records) > 50:
             self.game_records = self.game_records[-50:]
-        # 通知监听器并尝试持久化
+
+    # 通知监听器并尝试持久化
         try:
             self._notify_listeners()
         except Exception:
             pass
+
 
     def get_win_rate(self):
         """获取胜率"""
@@ -326,8 +328,15 @@ class Player:
         player.completed_games = data.get('completed_games', 0)
         player.total_moves = data.get('total_moves', 0)
         player.total_time = data.get('total_time', 0)
+
         player.best_time_normal = data.get('best_time_normal')
+        if player.best_time_normal == 0:
+            player.best_time_normal = None   # ★ 修复点 2
+
         player.best_time_ultimate = data.get('best_time_ultimate')
+        if player.best_time_ultimate == 0:
+            player.best_time_ultimate = None # ★ 修复点 2
+ 
         player.items = data.get('items', {})
         player.achievements = data.get('achievements', [])
         player.created_at = data.get('created_at', time.time())
@@ -357,6 +366,8 @@ class Player:
 
     def __repr__(self):
         return self.__str__()
+
+
 
 
 # ============== 测试代码 ==============
