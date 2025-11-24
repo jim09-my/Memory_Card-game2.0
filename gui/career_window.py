@@ -337,9 +337,14 @@ class CareerWindow:
             row.create_text(cx, 38, text=center_text, font=('Arial', 11), fill='#546E7A', anchor='center', tags='content')
             
             # 3. 右
-            score = record.get('reward', 0)
+            score = record.get('score', 0)
+            reward = record.get('reward', 0)
             score_col = '#EF6C00' if score > 0 else '#9E9E9E'
-            row.create_text(w-40, 38, text=f"+{score}分", font=('Arial Rounded MT Bold', 16), fill=score_col, anchor='e', tags='content')
+            reward_col = UIConfig.COLORS.get('danger', '#FF5252') if reward > 0 else '#9E9E9E'
+            row.create_text(w-40, 38, text=f"+{reward}分", font=('Arial Rounded MT Bold', 16), fill=reward_col, anchor='e', tags='content')
+            row.create_text(w-150, 38, text=f"{score}分", font=('Arial Rounded MT Bold', 16), fill=score_col, anchor='e', tags='content')
+            row.create_text(w-40, 58, text="奖励", font=('Arial', 9), fill='#78909C', anchor='e', tags='content')
+            row.create_text(w-150, 58, text="得分", font=('Arial', 9), fill='#78909C', anchor='e', tags='content')
 
         row.bind('<Configure>', _draw_bg)
 

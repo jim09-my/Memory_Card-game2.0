@@ -446,5 +446,23 @@
       "undo": 0
     },
     "timestamp": 1763911577
+  },
+  {
+    "mode": "normal",
+    "grid_size": 4,
+    "username": "admin",
+    "completed": true,
+    "time_used": 33,
+    "moves": 21,
+    "mistakes": 13,
+    "score": 73,
+    "reward": 235,
+    "items_used": {
+      "hint": 0,
+      "time_extend": 0,
+      "shuffle_prevent": 0,
+      "undo": 0
+    },
+    "timestamp": 1763973310
   }
 ]

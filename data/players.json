@@ -517,15 +517,15 @@
     "username": "admin",
     "email": "",
     "password": "123456",
-    "points": 105,
-    "level": 2,
+    "points": 740,
+    "level": 3,
     "experience": 0,
-    "total_points_earned": 1905,
-    "total_games": 5,
-    "completed_games": 4,
-    "total_moves": 105,
-    "total_time": 279,
-    "best_time_normal": 34,
+    "total_points_earned": 2540,
+    "total_games": 6,
+    "completed_games": 5,
+    "total_moves": 126,
+    "total_time": 312,
+    "best_time_normal": 33,
     "best_time_ultimate": null,
     "items": {},
     "achievements": [
@@ -536,11 +536,12 @@
       "speedrunner_normal_45",
       "low_moves_normal_32",
       "dev_mode_admin",
-      "win_streak_3"
+      "win_streak_3",
+      "win_streak_5"
     ],
     "created_at": 1763647736.8366134,
-    "last_login": 1763862105.83386,
-    "consecutive_days": 4,
+    "last_login": 1763973590.8756008,
+    "consecutive_days": 5,
     "game_records": [
       {
         "mode": "ultimate",
@@ -631,6 +632,24 @@
           "undo": 0
         },
         "timestamp": 1763836525.878517
+      },
+      {
+        "mode": "normal",
+        "grid_size": 4,
+        "username": "admin",
+        "completed": true,
+        "time_used": 33,
+        "moves": 21,
+        "mistakes": 13,
+        "score": 73,
+        "reward": 235,
+        "items_used": {
+          "hint": 0,
+          "time_extend": 0,
+          "shuffle_prevent": 0,
+          "undo": 0
+        },
+        "timestamp": 1763973310.7319143
       }
     ],
     "benefits": {
