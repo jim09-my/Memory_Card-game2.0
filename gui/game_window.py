@@ -1,5 +1,6 @@
 """
-游戏窗口 - v4.2 完整重制版
+游戏窗口 - v4.3 修复版
+修复：游戏结束后自动关闭窗口，确保单窗口运行
 """
 
 import tkinter as tk
@@ -216,8 +217,7 @@ class GameWindow:
         grid_container = tk.Frame(self.game_frame, bg=UIConfig.COLORS['primary'])
         grid_container.place(relx=0.5, rely=0.5, anchor=tk.CENTER)
         
-        # === 修复点：CardList 适配 ===
-        total_cards = self.game.cards.get_size() # 使用 get_size() 而不是 len()
+        total_cards = self.game.cards.get_size()
         
         for i in range(total_cards):
             r, c = i // cols, i % cols
@@ -270,8 +270,7 @@ class GameWindow:
     def _sync_cards_state(self):
         if not self.game: return
         self.game.resolving_pair = False
-        # === 修复点：CardList 适配 ===
-        all_cards = self.game.cards.get_all_cards() # 获取列表
+        all_cards = self.game.cards.get_all_cards()
         
         for i, card in enumerate(all_cards):
             if i >= len(self.card_buttons): continue
@@ -321,7 +320,6 @@ class GameWindow:
             if getattr(self.game, 'shuffle_status', None) == 'shuffled':
                 self._create_card_grid()
                 try:
-                    # === 修复点：CardList 适配 ===
                     all_cards = self.game.cards.get_all_cards()
                     for i, card in enumerate(all_cards):
                         if i >= len(self.card_buttons): break
@@ -356,7 +354,6 @@ class GameWindow:
         if self._end_handled: return
         self._end_handled = True
         try:
-            # === 修复点：Queue 适配 ===
             last = self.player.get_all_records()[-1] if self.player.get_all_records() else None
             reward = last.get('reward', 0) if (last and last.get('completed')) else self.game._calculate_reward(int(self.game.timer.get_elapsed_time()))
         except:
@@ -373,13 +370,21 @@ class GameWindow:
                     a = defs.get(aid, {})
                     lines.append(f"{a.get('icon','')} {a.get('name',aid)} (+{a.get('reward',0)}积分)")
                 messagebox.showinfo("成就解锁", "\n".join(lines))
-        self.on_close() if self.on_close else self.window.destroy()
+        
+        # === 修复核心：先销毁自己，再调用主菜单回调 ===
+        self.window.destroy()
+        if self.on_close: 
+            self.on_close()
 
     def _on_game_failed(self):
         if self._end_handled: return
         self._end_handled = True
         messagebox.showinfo("遗憾", "时间到了，挑战失败！")
-        self.on_close() if self.on_close else self.window.destroy()
+        
+        # === 修复核心：先销毁自己，再调用主菜单回调 ===
+        self.window.destroy()
+        if self.on_close: 
+            self.on_close()
 
     def _on_closing(self):
         if self.update_task: self.window.after_cancel(self.update_task)
@@ -389,8 +394,11 @@ class GameWindow:
         if hasattr(self.player, 'remove_change_listener'):
             try: self.player.remove_change_listener(self._on_player_change)
             except: pass
+        
+        # === 修复核心：确保正常关闭 ===
         self.window.destroy()
-        if self.on_close: self.on_close()
+        if self.on_close: 
+            self.on_close()
 
     def _on_player_change(self):
         self.window.after(0, self._update_item_display)
@@ -405,7 +413,6 @@ class GameWindow:
         if item_id == 'hint':
             self.game.use_hint()
             for idx in self.game.hint_cards:
-                # === 链表适配 ===
                 card = self.game.get_card_by_index(idx)
                 if card:
                     r, s = card.value
@@ -453,7 +460,6 @@ class GameWindow:
 
     def _restore_hint(self):
         for idx in self.game.hint_cards:
-            # === 链表适配 ===
             card = self.game.get_card_by_index(idx)
             if card and not card.is_matched: self.card_buttons[idx].show_back()
         self.game.hide_hint()
@@ -533,10 +539,7 @@ class GameWindow:
     def _render_cards_state(self):
         if not self.game: return
         self.game.resolving_pair = False
-        
-        # === 修复点：CardList 适配 ===
         all_cards = self.game.cards.get_all_cards()
-        
         for i, card in enumerate(all_cards):
             r, s = card.value
             if card.is_matched and getattr(self.card_buttons[i], '_is_vanished', False):

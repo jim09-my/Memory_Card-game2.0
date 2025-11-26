@@ -532,3 +532,89 @@ class RoundButton(tk.Canvas):
         self._hover = False
         self._draw()
         self.config(cursor='')
+
+
+    """
+    通用糖果风格弹窗 (替代 messagebox)
+    支持自定义标题、内容、图标、主题色和回调函数
+    """
+    def __init__(self, parent, title, message, theme='success', btn_text="确定", on_close=None):
+        super().__init__(parent)
+        self.on_close_callback = on_close
+        self.configure(bg=UIConfig.COLORS['primary'])
+        self.overrideredirect(True)  # 无边框
+        self.attributes('-topmost', True) # 置顶
+        self.transient(parent)
+        
+        # 尺寸与居中
+        w, h = 420, 260
+        screen_w = self.winfo_screenwidth()
+        screen_h = self.winfo_screenheight()
+        x = (screen_w - w) // 2
+        y = (screen_h - h) // 2
+        self.geometry(f"{w}x{h}+{x}+{y}")
+        
+        # 主题配置
+        themes = {
+            'success': {'bg': '#DCEDC8', 'btn': '#66BB6A', 'btn_hover': '#81C784', 'icon': '🎁'},
+            'win':     {'bg': '#FFF9C4', 'btn': '#FFB74D', 'btn_hover': '#FFCA28', 'icon': '🏆'},
+            'fail':    {'bg': '#FFCDD2', 'btn': '#EF5350', 'btn_hover': '#E57373', 'icon': '🥺'},
+            'info':    {'bg': '#B3E5FC', 'btn': '#29B6F6', 'btn_hover': '#4FC3F7', 'icon': 'ℹ️'}
+        }
+        theme_cfg = themes.get(theme, themes['info'])
+        
+        # 画布背景
+        self.canvas = tk.Canvas(self, width=w, height=h, bg=UIConfig.COLORS['primary'], highlightthickness=0)
+        self.canvas.pack(fill=tk.BOTH, expand=True)
+        
+        # 1. 绘制阴影 (深色半透明圆角)
+        self._draw_rounded_rect(self.canvas, 8, 8, w-16, h-16, 20, fill='#546E7A', outline="")
+        
+        # 2. 绘制主体背景 (白色)
+        self._draw_rounded_rect(self.canvas, 4, 4, w-16, h-16, 20, fill='white', outline="")
+        
+        # 3. 绘制顶部装饰条 (主题色)
+        self.canvas.create_arc(4, 4, 44, 44, start=90, extent=90, fill=theme_cfg['bg'], outline="")
+        self.canvas.create_arc(w-52, 4, w-12, 44, start=0, extent=90, fill=theme_cfg['bg'], outline="")
+        self.canvas.create_rectangle(24, 4, w-32, 24, fill=theme_cfg['bg'], outline="")
+        self.canvas.create_rectangle(4, 24, w-12, 80, fill=theme_cfg['bg'], outline="")
+        
+        # 4. 内容容器
+        content_frame = tk.Frame(self, bg='white')
+        content_frame.place(relx=0.5, rely=0.55, anchor=tk.CENTER, width=380, height=150)
+        
+        # 图标 (浮在装饰条和白底之间)
+        tk.Label(self, text=theme_cfg['icon'], font=("Segoe UI Emoji", 48), 
+                 bg=theme_cfg['bg']).place(relx=0.5, y=55, anchor=tk.CENTER)
+        
+        # 标题
+        tk.Label(content_frame, text=title, font=("Arial Rounded MT Bold", 16, "bold"), 
+                 fg='#37474F', bg='white').pack(pady=(35, 5))
+        
+        # 消息内容
+        tk.Label(content_frame, text=message, font=("Arial", 11), 
+                 fg='#78909C', bg='white', wraplength=360, justify='center').pack()
+        
+        # 5. 按钮
+        btn_frame = tk.Frame(self, bg='white')
+        btn_frame.place(relx=0.5, rely=0.85, anchor=tk.CENTER)
+        
+        self.btn = RoundButton(btn_frame, text=btn_text, width=120, height=40, 
+                               bg_color=theme_cfg['btn'], hover_color=theme_cfg['btn_hover'],
+                               parent_bg='white', command=self._confirm)
+        self.btn.pack()
+        
+        self.grab_set() # 模态窗口
+
+    def _draw_rounded_rect(self, canvas, x, y, w, h, r, fill, outline=""):
+        canvas.create_arc(x, y, x+2*r, y+2*r, start=90, extent=90, fill=fill, outline=outline)
+        canvas.create_arc(x+w-2*r, y, x+w, y+2*r, start=0, extent=90, fill=fill, outline=outline)
+        canvas.create_arc(x+w-2*r, y+h-2*r, x+w, y+h, start=270, extent=90, fill=fill, outline=outline)
+        canvas.create_arc(x, y+h-2*r, x+2*r, y+h, start=180, extent=90, fill=fill, outline=outline)
+        canvas.create_rectangle(x+r, y, x+w-r, y+h, fill=fill, outline=outline)
+        canvas.create_rectangle(x, y+r, x+w, y+h-r, fill=fill, outline=outline)
+
+    def _confirm(self):
+        self.destroy()
+        if self.on_close_callback:
+            self.on_close_callback()

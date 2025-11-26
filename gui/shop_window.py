@@ -3,8 +3,11 @@ from tkinter import messagebox
 from config import ItemConfig, UIConfig
 from managers.shop_manager import ShopManager
 from managers.data_manager import save_player
+# === 引入归并排序 ===
+from data_structures.sort_algorithms import merge_sort
+from data_structures.sort_algorithms import merge_sort
 
-# --- 辅助：圆角绘制工具 ---
+# --- 辅助绘图函数 (保持不变) ---
 def draw_rounded_rect(canvas, x, y, w, h, r, fill, outline=""):
     canvas.create_arc(x, y, x+2*r, y+2*r, start=90, extent=90, fill=fill, outline=outline)
     canvas.create_arc(x+w-2*r, y, x+w, y+2*r, start=0, extent=90, fill=fill, outline=outline)
@@ -13,7 +16,6 @@ def draw_rounded_rect(canvas, x, y, w, h, r, fill, outline=""):
     canvas.create_rectangle(x+r, y, x+w-r, y+h, fill=fill, outline=outline)
     canvas.create_rectangle(x, y+r, x+w, y+h-r, fill=fill, outline=outline)
 
-# --- 扁平购买按钮 (胶囊风格) ---
 class FlatBuyButton(tk.Canvas):
     def __init__(self, master, text, command=None, width=90, height=32, state='normal'):
         super().__init__(master, width=width, height=height, bg='white', highlightthickness=0, bd=0)
@@ -21,18 +23,14 @@ class FlatBuyButton(tk.Canvas):
         self._command = command
         self.w, self.h = width, height
         self._state = state
-        
         self.bg_color = '#FFF59D' if state == 'normal' else '#EEEEEE'
         self.text_color = '#5D4037' if state == 'normal' else '#9E9E9E'
-        
         if self._state != 'disabled':
             self.bind('<Enter>', self._on_enter)
             self.bind('<Leave>', self._on_leave)
             self.bind('<Button-1>', self._on_press)
             self.bind('<ButtonRelease-1>', self._on_release)
-        
         self._draw()
-
     def _draw(self):
         self.delete('all')
         scale = 0.96 if self._state == 'active' else 1.0
@@ -42,13 +40,10 @@ class FlatBuyButton(tk.Canvas):
         x1, y1 = cx - w/2, cy - h/2
         x2, y2 = cx + w/2, cy + h/2
         col = '#FFF176' if self._state == 'hover' else self.bg_color
-        
         self.create_arc(x1, y1, x1+2*r, y1+2*r, start=90, extent=180, fill=col, outline="")
         self.create_arc(x2-2*r, y1, x2, y1+2*r, start=270, extent=180, fill=col, outline="")
         self.create_rectangle(x1+r, y1, x2-r, y2+1, fill=col, outline="")
-        
         self.create_text(cx, cy, text=self.text, font=('Arial Rounded MT Bold', 11), fill=self.text_color)
-
     def _on_enter(self, e): self._state = 'hover'; self.config(cursor='hand2'); self._draw()
     def _on_leave(self, e): self._state = 'normal'; self.config(cursor=''); self._draw()
     def _on_press(self, e): self._state = 'active'; self._draw()
@@ -62,15 +57,15 @@ class ShopWindow:
         self.master = master
         self.player = player
         self.shop_manager = ShopManager()
-
         self.window = tk.Toplevel(master)
         self.window.title("道具商城")
-        self.window.geometry("500x600")
+        self.window.geometry("500x650") # 增加高度以容纳排序按钮
         self.window.config(bg='#E0F7FA')
         self.window.transient(master)
         self.window.grab_set()
-        
         self._center_window()
+        
+        self.sort_mode = 0 # 0: 默认, 1: 价格升序, 2: 价格降序
         
         self.canvas = tk.Canvas(self.window, bg='#E0F7FA', highlightthickness=0, bd=0)
         self.canvas.place(x=0, y=0, relwidth=1, relheight=1)
@@ -79,15 +74,19 @@ class ShopWindow:
         
         self._create_points_display()
         self._create_back_button()
+        
+        # === 添加排序按钮 ===
+        self._create_sort_controls()
+        
         self._create_items_area()
-
+        
         if hasattr(self.player, 'add_change_listener'):
             self.player.add_change_listener(self._on_player_change)
         self.window.protocol("WM_DELETE_WINDOW", self._close)
 
     def _center_window(self):
         self.window.update_idletasks()
-        w, h = 500, 600
+        w, h = 500, 650
         x = (self.window.winfo_screenwidth() - w) // 2
         y = (self.window.winfo_screenheight() - h) // 2
         self.window.geometry(f"{w}x{h}+{x}+{y}")
@@ -101,7 +100,6 @@ class ShopWindow:
         y_pos = 60
         text = "道具商城"
         font = ("Arial Rounded MT Bold", 32, "bold")
-        
         for dx, dy in [(-1,-1), (-1,1), (1,-1), (1,1)]:
             self.canvas.create_text(center_x+dx, y_pos+dy, text=text, font=font, fill='white')
         self.canvas.create_text(center_x, y_pos, text=text, font=font, fill='#FBC02D')
@@ -116,9 +114,24 @@ class ShopWindow:
                         relief=tk.FLAT, bd=0)
         btn.place(x=460, y=15, width=25, height=25)
 
+    def _create_sort_controls(self):
+        frame = tk.Frame(self.window, bg='#E0F7FA')
+        frame.place(relx=0.5, y=145, anchor=tk.CENTER)
+        
+        self.sort_btn = tk.Button(frame, text="⇅ 价格排序", command=self._toggle_sort,
+                                  bg='#FFF59D', fg='#5D4037', font=('Arial', 10, 'bold'),
+                                  relief=tk.FLAT)
+        self.sort_btn.pack()
+
+    def _toggle_sort(self):
+        self.sort_mode = (self.sort_mode + 1) % 3
+        texts = ["⇅ 价格排序 (默认)", "↑ 价格排序 (低到高)", "↓ 价格排序 (高到低)"]
+        self.sort_btn.config(text=texts[self.sort_mode])
+        self._render_items()
+
     def _create_items_area(self):
         container = tk.Frame(self.window, bg='#E0F7FA')
-        container.place(relx=0.5, rely=0.60, anchor=tk.CENTER, width=460, height=420)
+        container.place(relx=0.5, rely=0.62, anchor=tk.CENTER, width=460, height=420)
         
         canvas = tk.Canvas(container, bg='#E0F7FA', highlightthickness=0)
         scrollbar = tk.Scrollbar(container, orient="vertical", command=canvas.yview)
@@ -138,11 +151,28 @@ class ShopWindow:
         for widget in self.scrollable_frame.winfo_children():
             widget.destroy()
 
-        items = self.shop_manager.get_items() or ItemConfig.ITEMS
+        # 获取原始字典数据
+        raw_items = self.shop_manager.get_items() or ItemConfig.ITEMS
+        
+        # 将字典转为列表，并保留 key 作为 item_id
+        items_list = []
+        for k, v in raw_items.items():
+            item_copy = v.copy()
+            item_copy['id'] = k
+            items_list.append(item_copy)
+            
+        # === 使用归并排序进行排序 ===
+        if self.sort_mode == 1: # 升序
+            items_list = merge_sort(items_list, lambda x: x['price'], reverse=False)
+        elif self.sort_mode == 2: # 降序
+            items_list = merge_sort(items_list, lambda x: x['price'], reverse=True)
+        # sort_mode == 0: 保持默认字典序/读取序
+
         col_count = 0
         row_count = 0
         
-        for item_id, item in items.items():
+        for item in items_list:
+            item_id = item['id']
             card_w, card_h = 180, 190
             card = tk.Canvas(self.scrollable_frame, bg='#E0F7FA', width=card_w, height=card_h, highlightthickness=0)
             card.grid(row=row_count, column=col_count, padx=15, pady=15)
@@ -175,12 +205,8 @@ class ShopWindow:
     def _purchase(self, item_id):
         success, msg = self.shop_manager.purchase_item(self.player, item_id)
         if success:
-        # ★ 新增：获取道具名字 ★
             item_name = (self.shop_manager.get_items() or ItemConfig.ITEMS)[item_id]["name"]
-
-        # ★ 修改提示框文本 ★
             messagebox.showinfo("成功", f"{item_name}\n购买成功！")
-
             save_player(self.player)
             self._update_ui()
         else:

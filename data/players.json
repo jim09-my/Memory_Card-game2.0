@@ -740,14 +740,14 @@
     "username": "root",
     "email": "",
     "password": "123456",
-    "points": 490500,
+    "points": 486925,
     "level": 3,
     "experience": 0,
-    "total_points_earned": 2300,
-    "total_games": 3,
-    "completed_games": 3,
-    "total_moves": 150,
-    "total_time": 224,
+    "total_points_earned": 2675,
+    "total_games": 5,
+    "completed_games": 5,
+    "total_moves": 211,
+    "total_time": 309,
     "best_records_normal": [
       [
         31,
@@ -773,14 +773,56 @@
           },
           "timestamp": 1764160673.5584965
         }
+      ],
+      [
+        40,
+        {
+          "mode": "normal",
+          "grid_size": 4,
+          "username": "root",
+          "completed": true,
+          "time_used": 40,
+          "moves": 26,
+          "mistakes": 18,
+          "score": 65,
+          "reward": 210,
+          "items_used": {
+            "hint": 1,
+            "time_extend": 0,
+            "shuffle_prevent": 0,
+            "undo": 0
+          },
+          "timestamp": 1764163659.512572
+        }
+      ],
+      [
+        45,
+        {
+          "mode": "normal",
+          "grid_size": 4,
+          "username": "root",
+          "completed": true,
+          "time_used": 45,
+          "moves": 35,
+          "mistakes": 27,
+          "score": 62,
+          "reward": 165,
+          "items_used": {
+            "hint": 0,
+            "time_extend": 0,
+            "shuffle_prevent": 0,
+            "undo": 0
+          },
+          "timestamp": 1764163719.7338483
+        }
       ]
     ],
     "best_records_ultimate": [],
     "items": {
-      "time_extend": 11,
-      "hint": 8,
-      "shuffle_prevent": 5,
-      "undo": 2
+      "time_extend": 16,
+      "hint": 14,
+      "shuffle_prevent": 7,
+      "undo": 3
     },
     "achievements": [
       "first_game",
@@ -792,7 +834,7 @@
       "login_streak_3"
     ],
     "created_at": 1763993571.5211844,
-    "last_login": 1764160632.741693,
+    "last_login": 1764164706.2087445,
     "consecutive_days": 3,
     "game_records": [
       {
@@ -848,6 +890,42 @@
           "undo": 0
         },
         "timestamp": 1764160673.5584965
+      },
+      {
+        "mode": "normal",
+        "grid_size": 4,
+        "username": "root",
+        "completed": true,
+        "time_used": 40,
+        "moves": 26,
+        "mistakes": 18,
+        "score": 65,
+        "reward": 210,
+        "items_used": {
+          "hint": 1,
+          "time_extend": 0,
+          "shuffle_prevent": 0,
+          "undo": 0
+        },
+        "timestamp": 1764163659.512572
+      },
+      {
+        "mode": "normal",
+        "grid_size": 4,
+        "username": "root",
+        "completed": true,
+        "time_used": 45,
+        "moves": 35,
+        "mistakes": 27,
+        "score": 62,
+        "reward": 165,
+        "items_used": {
+          "hint": 0,
+          "time_extend": 0,
+          "shuffle_prevent": 0,
+          "undo": 0
+        },
+        "timestamp": 1764163719.7338483
       }
     ],
     "benefits": {
