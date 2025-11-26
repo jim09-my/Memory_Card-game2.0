@@ -11,6 +11,45 @@ from gui.main_window import MainWindow
 
 
 def ensure_data_files():
+    """确保基础数据文件存在（打包友好）"""
+    # 确保数据目录存在
+    data_dir = DataConfig.DATA_DIR
+    os.makedirs(data_dir, exist_ok=True)
+    
+    # 打印数据目录位置（调试用，可选）
+    print(f"数据保存位置: {data_dir}")
+    
+    # 仅创建必须的全局文件
+    defaults = {
+        DataConfig.PLAYERS_FILE: {},
+        DataConfig.RECORDS_FILE: [],
+        DataConfig.ACHIEVEMENTS_FILE: {'definitions': [], 'unlocked': {}}
+    }
+                               
+    for path, default_content in defaults.items():
+        if not os.path.exists(path):
+            try:
+                with open(path, 'w', encoding='utf-8') as f:
+                    json.dump(default_content, f, indent=2, ensure_ascii=False)
+                print(f"已创建: {path}")
+            except Exception as e:
+                print(f"创建文件失败 {path}: {e}")
+
+    # 删除不需要的旧文件（如果存在）
+    try:
+        profiles_file = os.path.join(os.path.dirname(DataConfig.PLAYERS_FILE), 'player_profiles.json')
+        for p in [profiles_file, DataConfig.SETTINGS_FILE, DataConfig.SHOP_FILE]:
+            if os.path.exists(p):
+                try:
+                    os.remove(p)
+                    print(f"已删除旧文件: {p}")
+                except Exception:
+                    pass
+    except Exception:
+        pass
+
+
+def ensure_data_files():
     """确保基础数据文件存在"""
     # 仅创建必须的全局文件；用户已选择不需要 player_profiles.json, settings.json, shop_items.json
     defaults = {

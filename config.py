@@ -1,6 +1,28 @@
 import os
+import sys
+import random
 from datetime import datetime
 
+
+# ============== 路径配置（支持打包） ==============
+
+def get_base_path():
+    """获取数据目录（支持打包和开发环境）"""
+    if getattr(sys, 'frozen', False):
+        # 打包后：使用用户文档目录
+        if sys.platform == 'win32':
+            base = os.path.join(os.environ.get('APPDATA', os.path.expanduser('~')), 'MemoryCardGame')
+        elif sys.platform == 'darwin':  # macOS
+            base = os.path.expanduser('~/Library/Application Support/MemoryCardGame')
+        else:  # Linux
+            base = os.path.expanduser('~/.memory_card_game')
+    else:
+        # 开发环境：使用项目根目录下的 data 文件夹
+        base = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'data')
+    
+    # 确保目录存在
+    os.makedirs(base, exist_ok=True)
+    return base
 # ============== 路径配置 (保持不变) ==============
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 DATA_DIR = os.path.join(BASE_DIR, 'data')

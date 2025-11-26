@@ -310,7 +310,11 @@
     "root": [
       "first_game",
       "first_win",
-      "first_item_use"
+      "first_item_use",
+      "low_moves_normal_32",
+      "speedrunner_normal_45",
+      "record_break_normal",
+      "login_streak_3"
     ],
     "1234": [
       "win_streak_10",

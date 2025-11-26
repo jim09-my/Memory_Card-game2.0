@@ -3,11 +3,11 @@ import math
 from datetime import datetime
 from config import UIConfig, AchievementConfig
 from managers.data_manager import load_records
+# === 引入数据结构 ===
+from data_structures.binary_tree import Leaderboard  # <--- 新增：使用 AVL 树进行排序
 
-# --- 绘图辅助函数 ---
-
+# --- 绘图辅助函数 (保持不变) ---
 def draw_rounded_rect(canvas, x, y, w, h, r, fill, outline="", width=0):
-    """绘制平滑圆角矩形"""
     canvas.create_arc(x, y, x+2*r, y+2*r, start=90, extent=90, fill=fill, outline=outline, width=width)
     canvas.create_arc(x+w-2*r, y, x+w, y+2*r, start=0, extent=90, fill=fill, outline=outline, width=width)
     canvas.create_arc(x+w-2*r, y+h-2*r, x+w, y+h, start=270, extent=90, fill=fill, outline=outline, width=width)
@@ -16,29 +16,20 @@ def draw_rounded_rect(canvas, x, y, w, h, r, fill, outline="", width=0):
     canvas.create_rectangle(x, y+r, x+w, y+h-r, fill=fill, outline=outline, width=width)
 
 def draw_clean_border(canvas, x, y, w, h, r, color, width=2):
-    """
-    绘制干净的圆角边框 (无内部杂线)
-    使用线条和空心圆弧拼接，避免 fill+outline 导致的内部半径线
-    """
-    # 4条直线
-    canvas.create_line(x+r, y, x+w-r, y, fill=color, width=width) # 上
-    canvas.create_line(x+r, y+h, x+w-r, y+h, fill=color, width=width) # 下
-    canvas.create_line(x, y+r, x, y+h-r, fill=color, width=width) # 左
-    canvas.create_line(x+w, y+r, x+w, y+h-r, fill=color, width=width) # 右
-    
-    # 4个圆弧 (style=tk.ARC 只画线)
-    # 注意：调整偏移量以完美衔接
+    canvas.create_line(x+r, y, x+w-r, y, fill=color, width=width)
+    canvas.create_line(x+r, y+h, x+w-r, y+h, fill=color, width=width)
+    canvas.create_line(x, y+r, x, y+h-r, fill=color, width=width)
+    canvas.create_line(x+w, y+r, x+w, y+h-r, fill=color, width=width)
     canvas.create_arc(x, y, x+2*r, y+2*r, start=90, extent=90, style=tk.ARC, outline=color, width=width)
     canvas.create_arc(x+w-2*r, y, x+w, y+2*r, start=0, extent=90, style=tk.ARC, outline=color, width=width)
     canvas.create_arc(x+w-2*r, y+h-2*r, x+w, y+h, start=270, extent=90, style=tk.ARC, outline=color, width=width)
     canvas.create_arc(x, y+h-2*r, x+2*r, y+h, start=180, extent=90, style=tk.ARC, outline=color, width=width)
 
 def draw_shadow_card(canvas, x, y, w, h, r, bg_color, shadow_color='#CFD8DC', offset=4):
-    """绘制带阴影的立体卡片"""
     draw_rounded_rect(canvas, x+offset, y+offset, w, h, r, shadow_color)
     draw_rounded_rect(canvas, x, y, w, h, r, bg_color)
 
-# --- 顶部导航按钮 ---
+# --- 组件类 (保持不变) ---
 class CandyTabButton(tk.Canvas):
     def __init__(self, master, text, command=None, width=130, height=50, theme='yellow', active=False):
         super().__init__(master, width=width, height=height, 
@@ -101,7 +92,6 @@ class CandyTabButton(tk.Canvas):
     def _on_click(self, e):
         if self._command: self._command()
 
-# --- 成就分类标签 ---
 class CategoryTag(tk.Canvas):
     def __init__(self, master, text, selected=False, command=None):
         super().__init__(master, width=80, height=32, bg=UIConfig.COLORS['primary'], highlightthickness=0)
@@ -211,9 +201,6 @@ class CareerWindow:
         for k, btn in self.tab_buttons.items():
             btn.set_active(k == key)
 
-    # ==========================================
-    # 1. 总览页面 (修改：白色背景为完全长方形)
-    # ==========================================
     def _build_overview(self, parent):
         stats = self.player.get_statistics()
         
@@ -221,7 +208,6 @@ class CareerWindow:
         bg.pack(fill=tk.BOTH, expand=True, padx=40, pady=10)
         
         w, h = 820, 480
-        # 修改：改为纯长方形 (create_rectangle)
         bg.create_rectangle(0, 0, w, h, fill='white', outline="")
         
         content = tk.Frame(bg, bg='white')
@@ -260,9 +246,6 @@ class CareerWindow:
             card.create_text(cx, 68, text=label, font=('Arial', 9), fill='#78909C')
             card.create_text(cx, 88, text=val, font=('Arial Rounded MT Bold', 13), fill='#37474F')
 
-    # ==========================================
-    # 2. 战绩页面 (保持平滑胶囊)
-    # ==========================================
     def _build_records(self, parent):
         list_container = tk.Frame(parent, bg=UIConfig.COLORS['primary'])
         list_container.pack(fill=tk.BOTH, expand=True, padx=30, pady=10)
@@ -282,8 +265,30 @@ class CareerWindow:
         self._apply_filters()
 
     def _apply_filters(self):
-        records = list(self.player.game_records)
-        records.sort(key=lambda r: r.get('timestamp', 0), reverse=True)
+        # 1. 修复：调用 get_all_records() 获取列表，而不是直接访问 Queue
+        raw_records = self.player.get_all_records()
+        
+        # 2. 应用高级数据结构：Leaderboard (AVL 树) 进行排序
+        # 虽然列表只有50条，sort很快，但为了演示 AVL 树的应用：
+        # 我们创建一个临时 Leaderboard，按时间戳将所有记录插入，然后按序读取
+        
+        leaderboard = Leaderboard(mode='time') # 这里的mode仅影响add_record时的key策略，我们手动指定
+        
+        # 将记录插入 AVL 树，Key 为时间戳 (取负实现降序，即最近的时间在前)
+        for i, rec in enumerate(raw_records):
+            # 为了防止时间戳完全相同导致覆盖，加一点微小偏移
+            timestamp = rec.get('timestamp', 0)
+            # AVL树默认中序遍历是升序。
+            # 我们希望最近的时间(timestamp大)排在前面。
+            # 所以我们用 -timestamp 作为key。
+            key = -timestamp + (i * 0.00001) 
+            leaderboard.add_record(str(i), key, real_record=rec)
+            
+        # 从 AVL 树中获取排序后的记录
+        # get_all_records() 返回的是按 Key 升序排列的 list
+        # Key 是 -timestamp，所以升序就是 timestamp 降序 (最近的在前)
+        sorted_data = leaderboard.get_all_records()
+        records = [item['real_record'] for item in sorted_data]
         
         for w in self.scrollable_records.winfo_children(): w.destroy()
         
@@ -348,9 +353,6 @@ class CareerWindow:
 
         row.bind('<Configure>', _draw_bg)
 
-    # ==========================================
-    # 3. 成就页面 (修改：已解锁边框优化)
-    # ==========================================
     def _build_achievements(self, parent):
         self.tag_frame = tk.Frame(parent, bg=UIConfig.COLORS['primary'])
         self.tag_frame.pack(fill=tk.X, pady=(0, 15), padx=40)
@@ -408,13 +410,9 @@ class CareerWindow:
             unlocked = a.get('id') in self.player.achievements
             
             if unlocked:
-                # --- 修改：只绘制最外面的黄色边框 ---
-                # 1. 绘制白色背景 (fill='white')
                 draw_rounded_rect(card, 2, 2, card_w-4, card_h-4, 18, fill='white')
-                # 2. 绘制干净的黄色外框 (无内部杂线)
                 draw_clean_border(card, 2, 2, card_w-4, card_h-4, 18, color="#FFD54F", width=3)
             else:
-                # 未解锁：普通灰底
                 draw_rounded_rect(card, 4, 4, card_w-8, card_h-8, 18, fill='#F5F5F5')
             
             cx = card_w / 2
@@ -452,26 +450,28 @@ class CareerWindow:
             return "--"
         return f"{int(s)}s"
 
-
     def _ach_progress(self, a):
         aid = a.get('id')
         p = self.player
+        # 修复：获取记录列表而不是直接用 Queue
+        records = p.get_all_records()
+        
         if aid == 'normal_master':
-            cur = sum(1 for r in p.game_records if r.get('mode')=='normal' and r.get('completed'))
+            cur = sum(1 for r in records if r.get('mode')=='normal' and r.get('completed'))
             return cur, 10
         if aid == 'ultimate_conqueror':
-            cur = sum(1 for r in p.game_records if r.get('mode')=='ultimate' and r.get('completed'))
+            cur = sum(1 for r in records if r.get('mode')=='ultimate' and r.get('completed'))
             return cur, 5
         if aid == 'persistent_50':
-            return len(p.game_records), 50
+            return len(records), 50
         if aid == 'item_user_10':
             cur = 0
-            for r in p.game_records:
+            for r in records:
                 iu = r.get('items_used', {})
                 cur += sum(iu.values()) if isinstance(iu, dict) else 0
             return cur, 10
         if aid == 'no_item_10':
-            cur = sum(1 for r in p.game_records if r.get('completed') and all((r.get('items_used',{}).get(k,0)==0) for k in ['hint','time_extend','shuffle_prevent','undo']))
+            cur = sum(1 for r in records if r.get('completed') and all((r.get('items_used',{}).get(k,0)==0) for k in ['hint','time_extend','shuffle_prevent','undo']))
             return cur, 10
         if aid == 'login_streak_3':
             return p.consecutive_days, 3

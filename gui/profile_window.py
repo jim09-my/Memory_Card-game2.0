@@ -39,7 +39,6 @@ class ProfileWindow:
         self.canvas.create_oval(500, -50, 650, 100, fill='#B2DFDB', outline="")
 
     def _create_header_area(self):
-        # 修改1：标题下移 (60 -> 75)
         center_x = 300
         y_pos = 75
         text = "我的数据"
@@ -49,7 +48,7 @@ class ProfileWindow:
             self.canvas.create_text(center_x+dx, y_pos+dy, text=text, font=font, fill='white')
         self.canvas.create_text(center_x, y_pos, text=text, font=font, fill='#A5D6A7')
         
-        # 2. 胜率圆圈
+        # 确保 statistics 获取正确
         stats = self.player.get_statistics()
         win_rate = int(stats['win_rate'])
         circle_x = center_x + 100
@@ -59,7 +58,6 @@ class ProfileWindow:
         self.canvas.create_text(circle_x, circle_y-5, text=f"{win_rate}%", font=('Arial', 10, 'bold'), fill='white')
         self.canvas.create_text(circle_x, circle_y+8, text="胜率", font=('Arial', 8), fill='white')
         
-        # 3. 用户名 (距离标题稍微近一点)
         self.canvas.create_text(center_x, y_pos + 55, 
                                 text=f"玩家：{self.player.username}", 
                                 font=('Arial', 12), fill='#546E7A')
@@ -72,7 +70,6 @@ class ProfileWindow:
 
     def _create_stats_grid(self):
         container = tk.Frame(self.window, bg='#E0F7FA')
-        # 修改2：网格位置上移 (rely 0.55 -> 0.45)，消除中间过大空白
         container.place(relx=0.5, rely=0.45, anchor=tk.CENTER)
         
         stats = self.player.get_statistics()
