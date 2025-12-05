@@ -52,13 +52,12 @@ def save_players(players_dict):
 def save_player(player):
     """Save account-only info for a player to players.json.
 
-    This writes minimal account fields (username, password, email, created_at, last_login).
+    This writes minimal account fields (username, password, created_at, last_login).
     Runtime data (points/items/records/achievements) should be stored in player_profiles.json.
     """
     players = load_players()
     acct = {
         'username': player.username,
-        'email': getattr(player, 'email', ''),
         'password': getattr(player, 'password', ''),
         'created_at': getattr(player, 'created_at', None),
         'last_login': getattr(player, 'last_login', None)

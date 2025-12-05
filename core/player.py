@@ -15,16 +15,14 @@ from data_structures.heap import TopNRecords  # <--- 新增：使用堆来管理
 class Player:
     """玩家类"""
 
-    def __init__(self, username, password='', email=''):
+    def __init__(self, username, password=''):
         """
-        初始化玩家
+        初始化玩家（邮箱字段已移除）
         :param username: 用户名
         :param password: 登录密码
-        :param email: 邮箱（兼容旧数据）
         """
         self.username = username
         self.password = password
-        self.email = email
         self.points = 500  # 初始积分
         self.level = 1
         self.experience = 0
@@ -257,7 +255,6 @@ class Player:
         """序列化（将数据结构转为 JSON 兼容格式）"""
         return {
             'username': self.username,
-            'email': self.email,
             'password': self.password,
             'points': self.points,
             'level': self.level,
@@ -282,7 +279,8 @@ class Player:
     @classmethod
     def from_dict(cls, data):
         """反序列化（从 dict 恢复数据结构）"""
-        player = cls(data['username'], data.get('password', ''), data.get('email', ''))
+        # 兼容旧数据：旧数据可能包含 'email' 字段，但构造函数已移除该参数
+        player = cls(data['username'], data.get('password', ''))
         player.points = data.get('points', 500)
         player.level = data.get('level', 1)
         player.experience = data.get('experience', 0)

@@ -574,14 +574,13 @@ class AdminWindow:
         with open(file_path, 'w', newline='', encoding='utf-8') as f:
             writer = csv.writer(f)
             writer.writerow([
-                '用户名', '邮箱', '密码', '积分', '等级', '总获得积分',
+                '用户名', '密码', '积分', '等级', '总获得积分',
                 '总游戏次数', '完成游戏次数', '总移动次数', '总游戏时间',
                 '创建时间', '最后登录', '连续登录天数', '成就数量', '道具数量'
             ])
             for username, user_data in self.users_data.items():
                 writer.writerow([
                     user_data.get('username', ''),
-                    user_data.get('email', ''),
                     user_data.get('password', ''),
                     user_data.get('points', 0),
                     user_data.get('level', 1),

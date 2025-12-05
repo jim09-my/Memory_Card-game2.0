@@ -626,5 +626,59 @@
       "undo": 0
     },
     "timestamp": 1764925060
+  },
+  {
+    "mode": "normal",
+    "grid_size": 4,
+    "username": "admin",
+    "completed": true,
+    "time_used": 48,
+    "moves": 24,
+    "mistakes": 16,
+    "score": 72,
+    "reward": 220,
+    "items_used": {
+      "hint": 0,
+      "time_extend": 0,
+      "shuffle_prevent": 0,
+      "undo": 0
+    },
+    "timestamp": 1764955904
+  },
+  {
+    "mode": "normal",
+    "grid_size": 4,
+    "username": "admin",
+    "completed": true,
+    "time_used": 32,
+    "moves": 15,
+    "mistakes": 7,
+    "score": 73,
+    "reward": 265,
+    "items_used": {
+      "hint": 0,
+      "time_extend": 0,
+      "shuffle_prevent": 0,
+      "undo": 0
+    },
+    "timestamp": 1764956207
+  },
+  {
+    "mode": "normal",
+    "grid_size": 4,
+    "username": "cjm",
+    "completed": true,
+    "time_used": 60,
+    "moves": 28,
+    "mistakes": 20,
+    "score": 62,
+    "reward": 150,
+    "items_used": {
+      "hint": 0,
+      "time_extend": 0,
+      "shuffle_prevent": 0,
+      "undo": 0
+    },
+    "timestamp": 1764956812
   }
 ]
