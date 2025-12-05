@@ -5,6 +5,7 @@ from gui.game_window import GameWindow
 from gui.shop_window import ShopWindow
 from gui.career_window import CareerWindow
 from gui.profile_window import ProfileWindow
+from gui.manual_window import ManualWindow
 from config import UIConfig
 from managers.data_manager import save_player
 
@@ -257,6 +258,7 @@ class MainWindow:
         btn_frame.place(relx=0.5, rely=0.62, anchor=tk.CENTER)
 
         buttons_config = [
+            ("📖 游戏说明书", self._open_manual, 'blue'),
             ("开始游戏", self._start_game, 'yellow'),
             ("道具商城", self._open_shop, 'blue'),
             ("游戏生涯", self._open_career, 'purple'),
@@ -282,6 +284,9 @@ class MainWindow:
 
     def _open_profile(self):
         ProfileWindow(self.window, self.player)
+
+    def _open_manual(self):
+        ManualWindow(self.window)
 
     def _save_player(self):
         try: save_player(self.player)

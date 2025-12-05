@@ -931,5 +931,29 @@
     "benefits": {
       "free_hint_redeemed": true
     }
+  },
+  "114514": {
+    "username": "114514",
+    "email": "",
+    "password": "222333",
+    "points": 500,
+    "level": 1,
+    "experience": 0,
+    "total_points_earned": 0,
+    "total_games": 0,
+    "completed_games": 0,
+    "total_moves": 0,
+    "total_time": 0,
+    "best_records_normal": [],
+    "best_records_ultimate": [],
+    "items": {},
+    "achievements": [],
+    "created_at": 1764909088.107761,
+    "last_login": 1764916784.3283484,
+    "consecutive_days": 1,
+    "game_records": [],
+    "benefits": {
+      "free_hint_redeemed": false
+    }
   }
 }
