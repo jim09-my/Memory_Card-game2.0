@@ -18,6 +18,7 @@ from PIL import Image, ImageTk
 from config import DataConfig, ASSETS_DIR, AchievementConfig, UIConfig
 from core.player import Player
 from managers.data_manager import add_unlocked_achievement
+from gui.admin_window import AdminWindow
 
 # --- UI 配色方案 ---
 THEME = {
@@ -312,13 +313,11 @@ class LoginWindow:
         self.entry_user.set_text(username)
 
     def _login_as_admin(self):
-        username = 'admin'
-        if username in self.players_db:
-            player = Player.from_dict(self.players_db[username])
-        else:
-            player = Player(username, 'admin')
-            self._save_player(player)
-        self._finish_login(player)
+        # 直接打开管理员窗口，不进入主游戏界面
+        self.window.withdraw()  # 隐藏当前窗口
+        admin_window = AdminWindow(self.window)
+        admin_window.show()
+        self.window.deiconify()  # 管理员窗口关闭后重新显示登录窗口
 
     def _finish_login(self, player):
         player.update_login()

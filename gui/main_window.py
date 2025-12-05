@@ -84,6 +84,66 @@ class ExitDialog(tk.Toplevel):
         self.on_confirm()
 
 
+class HelpButton(tk.Canvas):
+    def __init__(self, master, command=None):
+        super().__init__(master, width=50, height=50, 
+                         bg=UIConfig.COLORS['primary'], highlightthickness=0, bd=0)
+        self._command = command
+        self._state = 'normal'
+        
+        self.bind('<Enter>', self._on_enter)
+        self.bind('<Leave>', self._on_leave)
+        self.bind('<Button-1>', self._on_press)
+        self.bind('<ButtonRelease-1>', self._on_release)
+        
+        self._draw()
+
+    def _draw(self):
+        self.delete('all')
+        
+        # 根据状态调整颜色和大小
+        scale = 1.0
+        if self._state == 'hover': 
+            scale = 1.1
+        elif self._state == 'active': 
+            scale = 0.9
+            
+        size = 40 * scale
+        x_center, y_center = 25, 25
+        
+        # 绘制圆形背景
+        bg_color = '#4FC3F7' if self._state != 'active' else '#0288D1'
+        self.create_oval(x_center-size/2, y_center-size/2, 
+                         x_center+size/2, y_center+size/2, 
+                         fill=bg_color, outline="", width=2)
+        
+        # 绘制问号
+        text_color = 'white'
+        font = ('Arial Rounded MT Bold', 20, 'bold')
+        self.create_text(x_center, y_center, text="?", font=font, fill=text_color)
+
+    def _on_enter(self, e):
+        self._state = 'hover'
+        self.config(cursor='hand2')
+        self._draw()
+
+    def _on_leave(self, e):
+        self._state = 'normal'
+        self.config(cursor='')
+        self._draw()
+
+    def _on_press(self, e):
+        self._state = 'active'
+        self._draw()
+
+    def _on_release(self, e):
+        if self._state == 'active':
+            self._state = 'hover'
+            self._draw()
+            if self._command:
+                self.after(50, self._command)
+
+
 class CandyButton(tk.Canvas):
     def __init__(self, master, text, command=None, width=260, height=75, theme='yellow'):
         super().__init__(master, width=width, height=height, 
@@ -249,21 +309,35 @@ class MainWindow:
 
         self.canvas.create_text(center_x, y_pos, text=text, font=font, fill=face_color)
         
+        # 在"SCAU 记忆翻牌"标题下方显示欢迎语
         self.canvas.create_text(center_x, y_pos + 90, 
                                 text=f"✨ 欢迎回来，{self.player.username} ✨", 
                                 font=("Arial", 16, "bold"), fill='white')
 
+    def _create_help_button(self):
+        """创建左上角的帮助按钮"""
+        self.help_button = HelpButton(self.window, command=self._open_manual)
+        self.help_button.place(x=20, y=20)
+
     def _create_menu_buttons(self):
+        # 创建帮助按钮
+        self._create_help_button()
+        
         btn_frame = tk.Frame(self.window, bg=UIConfig.COLORS['primary'])
         btn_frame.place(relx=0.5, rely=0.62, anchor=tk.CENTER)
 
+        # 检查是否为管理员账户，如果是则添加管理员入口
         buttons_config = [
-            ("📖 游戏说明书", self._open_manual, 'blue'),
+            # 移除了说明书按钮
             ("开始游戏", self._start_game, 'yellow'),
             ("道具商城", self._open_shop, 'blue'),
             ("游戏生涯", self._open_career, 'purple'),
-            ("个人主页", self._open_profile, 'green') 
+            ("个人主页", self._open_profile, 'green')
         ]
+        
+        # 如果是管理员账户，添加管理员功能入口
+        if self.player.username.lower() == 'admin':
+            buttons_config.append(("管理员面板", self._open_admin_panel, 'red'))
 
         for text, cmd, theme in buttons_config:
             btn = CandyButton(btn_frame, text=text, command=cmd, 
@@ -287,6 +361,14 @@ class MainWindow:
 
     def _open_manual(self):
         ManualWindow(self.window)
+        
+    def _open_admin_panel(self):
+        """打开管理员面板"""
+        try:
+            from gui.admin_window import AdminWindow
+            AdminWindow(self.window)
+        except Exception as e:
+            messagebox.showerror("错误", f"无法打开管理员面板: {str(e)}")
 
     def _save_player(self):
         try: save_player(self.player)
