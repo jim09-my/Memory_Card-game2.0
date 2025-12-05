@@ -112,8 +112,13 @@
     "completed_games": 19,
     "total_moves": 844,
     "total_time": 1190,
-    "best_time_normal": 23,
-    "best_time_ultimate": null,
+    "best_records_normal": [
+      [
+        23,
+        {}
+      ]
+    ],
+    "best_records_ultimate": [],
     "items": {},
     "achievements": [
       "first_game",
@@ -135,8 +140,8 @@
       "no_item_streak_10"
     ],
     "created_at": 1763548912.416925,
-    "last_login": 1763997468.9290857,
-    "consecutive_days": 6,
+    "last_login": 1764932736.7237048,
+    "consecutive_days": 1,
     "game_records": [
       {
         "mode": "normal",
@@ -573,16 +578,42 @@
     "username": "admin",
     "email": "",
     "password": "123456",
-    "points": 90,
+    "points": 335,
     "level": 3,
     "experience": 0,
-    "total_points_earned": 2540,
-    "total_games": 6,
-    "completed_games": 5,
-    "total_moves": 126,
-    "total_time": 312,
-    "best_time_normal": 33,
-    "best_time_ultimate": null,
+    "total_points_earned": 2785,
+    "total_games": 7,
+    "completed_games": 6,
+    "total_moves": 145,
+    "total_time": 342,
+    "best_records_normal": [
+      [
+        30,
+        {
+          "mode": "normal",
+          "grid_size": 4,
+          "username": "admin",
+          "completed": true,
+          "time_used": 30,
+          "moves": 19,
+          "mistakes": 11,
+          "score": 73,
+          "reward": 245,
+          "items_used": {
+            "hint": 0,
+            "time_extend": 0,
+            "shuffle_prevent": 0,
+            "undo": 0
+          },
+          "timestamp": 1764925060.9347138
+        }
+      ],
+      [
+        33,
+        {}
+      ]
+    ],
+    "best_records_ultimate": [],
     "items": {},
     "achievements": [
       "first_game",
@@ -596,8 +627,8 @@
       "win_streak_5"
     ],
     "created_at": 1763647736.8366134,
-    "last_login": 1763993499.287959,
-    "consecutive_days": 5,
+    "last_login": 1764937051.2120616,
+    "consecutive_days": 1,
     "game_records": [
       {
         "mode": "ultimate",
@@ -706,6 +737,24 @@
           "undo": 0
         },
         "timestamp": 1763973310.7319143
+      },
+      {
+        "mode": "normal",
+        "grid_size": 4,
+        "username": "admin",
+        "completed": true,
+        "time_used": 30,
+        "moves": 19,
+        "mistakes": 11,
+        "score": 73,
+        "reward": 245,
+        "items_used": {
+          "hint": 0,
+          "time_extend": 0,
+          "shuffle_prevent": 0,
+          "undo": 0
+        },
+        "timestamp": 1764925060.9347138
       }
     ],
     "benefits": {
