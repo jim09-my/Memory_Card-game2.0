@@ -2,581 +2,347 @@ import tkinter as tk
 from tkinter import ttk
 from config import UIConfig
 
+# --- 绘图辅助函数 ---
+def draw_rounded_rect(canvas, x, y, w, h, r, fill, outline="", tags="bg_rect"):
+    """绘制圆角矩形"""
+    x, y = x+1, y+1
+    w, h = w-2, h-2
+    canvas.delete(tags)
+    canvas.create_arc(x, y, x+2*r, y+2*r, start=90, extent=90, fill=fill, outline=outline, tags=tags)
+    canvas.create_arc(x+w-2*r, y, x+w, y+2*r, start=0, extent=90, fill=fill, outline=outline, tags=tags)
+    canvas.create_arc(x+w-2*r, y+h-2*r, x+w, y+h, start=270, extent=90, fill=fill, outline=outline, tags=tags)
+    canvas.create_arc(x, y+h-2*r, x+2*r, y+h, start=180, extent=90, fill=fill, outline=outline, tags=tags)
+    canvas.create_rectangle(x+r, y, x+w-r, y+h, fill=fill, outline=outline, tags=tags)
+    canvas.create_rectangle(x, y+r, x+w, y+h-r, fill=fill, outline=outline, tags=tags)
+    canvas.tag_lower(tags)
 
+# --- 自定义圆角标签按钮 ---
+class CandyTabButton(tk.Canvas):
+    def __init__(self, master, text, command=None, width=120, height=36, selected=False):
+        super().__init__(master, width=width, height=height, 
+                         bg=UIConfig.COLORS['primary'], highlightthickness=0, bd=0)
+        self.text = text
+        self.command = command
+        self.btn_w = width
+        self.btn_h = height
+        self._selected = selected
+        self._hover = False
+        
+        self.bind('<Button-1>', self._on_click)
+        self.bind('<Enter>', self._on_enter)
+        self.bind('<Leave>', self._on_leave)
+        self._draw()
+
+    def set_selected(self, val):
+        self._selected = val
+        self._draw()
+
+    def _draw(self):
+        self.delete('all')
+        if self._selected:
+            bg_col = '#FFD54F' 
+            fg_col = '#5D4037'
+        elif self._hover:
+            bg_col = '#80DEEA'
+            fg_col = '#006064'
+        else:
+            bg_col = '#B2DFDB'
+            fg_col = '#455A64'
+        
+        r = 10 
+        draw_rounded_rect(self, 0, 0, self.btn_w, self.btn_h, r, fill=bg_col, tags="btn_bg")
+        font_style = ("Microsoft YaHei UI", 10, "bold")
+        self.create_text(self.btn_w/2, self.btn_h/2, text=self.text, font=font_style, fill=fg_col)
+
+    def _on_click(self, e):
+        if self.command: self.command()
+    def _on_enter(self, e):
+        self._hover = True
+        if not self._selected: self.config(cursor='hand2')
+        self._draw()
+    def _on_leave(self, e):
+        self._hover = False
+        self.config(cursor='')
+        self._draw()
+
+# --- 主窗口类 ---
 class ManualWindow:
     def __init__(self, parent):
         self.window = tk.Toplevel(parent)
-        self.window.title("SCAU 记忆翻牌游戏说明书")
-        self.window.geometry("900x700")
+        self.window.title("游戏说明书")
+        self.window.geometry("1100x750")
         self.window.config(bg=UIConfig.COLORS['primary'])
         self.window.resizable(False, False)
         
-        # 居中显示
         self._center_window()
+        self._configure_custom_styles()
         
-        # 创建界面元素
-        self._create_widgets()
+        self.tabs = {}
+        self.current_tab = None
+        self.inner_frame = None
         
-        # 设置关闭事件
-        self.window.protocol("WM_DELETE_WINDOW", self._on_close)
+        self._create_header()
+        self._create_nav_bar()
+        self._create_content_area()
         
+        self.window.after(50, lambda: self._switch_tab("game_intro"))
+        self.window.protocol("WM_DELETE_WINDOW", self.window.destroy)
+
     def _center_window(self):
-        """将窗口居中显示"""
         self.window.update_idletasks()
-        width = self.window.winfo_width()
-        height = self.window.winfo_height()
-        x = (self.window.winfo_screenwidth() // 2) - (width // 2)
-        y = (self.window.winfo_screenheight() // 2) - (height // 2)
-        self.window.geometry(f"{width}x{height}+{x}+{y}")
-        
-    def _create_widgets(self):
-        """创建界面组件"""
-        # 标题
-        title_label = tk.Label(
-            self.window,
-            text="SCAU 记忆翻牌游戏说明书",
-            font=("Arial Rounded MT Bold", 24, "bold"),
-            fg=UIConfig.COLORS['text_light'],
-            bg=UIConfig.COLORS['primary']
-        )
-        title_label.pack(pady=(20, 10))
-        
-        # 创建笔记本控件用于选项卡
-        notebook = ttk.Notebook(self.window)
-        notebook.pack(fill=tk.BOTH, expand=True, padx=20, pady=10)
-        
-        # 配置样式
-        self._configure_styles()
-        
-        # 创建各个选项卡
-        self._create_game_intro_tab(notebook)
-        self._create_interface_tab(notebook)
-        self._create_account_tab(notebook) # 对应道具商城内容
-        self._create_gameplay_tab(notebook)
-        self._create_achievements_tab(notebook)
-        self._create_points_tab(notebook)
-        self._create_tips_tab(notebook)
-        
-    def _configure_styles(self):
-        """配置样式"""
+        w, h = 1100, 750
+        x = (self.window.winfo_screenwidth() - w) // 2
+        y = (self.window.winfo_screenheight() - h) // 2
+        self.window.geometry(f"{w}x{h}+{x}+{y}")
+
+    def _configure_custom_styles(self):
         style = ttk.Style()
-        style.configure(
-            "Custom.TNotebook",
-            background=UIConfig.COLORS['primary']
-        )
-        style.configure(
-            "Custom.TNotebook.Tab",
-            background=UIConfig.COLORS['primary'],
-            foreground=UIConfig.COLORS['text_light'],
-            padding=[15, 8],
-            font=("Arial Rounded MT Bold", 18)
-        )
-        style.map(
-            "Custom.TNotebook.Tab",
-            background=[("selected", UIConfig.COLORS['bg_light'])],
-            foreground=[("selected", UIConfig.COLORS['text_dark'])]
-        )
-        
-    def _create_scrollable_frame(self, parent):
-        """创建可滚动的框架"""
-        canvas = tk.Canvas(parent, bg=UIConfig.COLORS['bg_light'], highlightthickness=0)
-        scrollbar = ttk.Scrollbar(parent, orient="vertical", command=canvas.yview)
-        scrollable_frame = tk.Frame(canvas, bg=UIConfig.COLORS['bg_light'])
-        
-        scrollable_frame.bind(
-            "<Configure>",
-            lambda e: canvas.configure(scrollregion=canvas.bbox("all"))
-        )
-        
-        canvas.create_window((0, 0), window=scrollable_frame, anchor="nw")
-        canvas.configure(yscrollcommand=scrollbar.set)
-        
-        # 添加鼠标滚轮支持
-        def _on_mousewheel(event):
-            canvas.yview_scroll(int(-1*(event.delta/120)), "units")
-            
-        canvas.bind_all("<MouseWheel>", _on_mousewheel)
-        
-        return canvas, scrollbar, scrollable_frame
-        
-    def _create_game_intro_tab(self, notebook):
-        """创建游戏简介选项卡"""
-        frame = tk.Frame(notebook, bg=UIConfig.COLORS['bg_light'])
-        notebook.add(frame, text="🎮 游戏简介")
-        
-        canvas, scrollbar, scrollable_frame = self._create_scrollable_frame(frame)
-        canvas.pack(side="left", fill="both", expand=True)
-        scrollbar.pack(side="right", fill="y")
-        
-        # 内容
-        content = """
-欢迎来到 SCAU 记忆翻牌游戏！这是一款考验记忆力、反应力与策略的经典卡牌翻牌游戏。通过翻牌配对来锻炼您的记忆力，解锁成就，提升等级，成为记忆大师！
+        try: style.theme_use('clam')
+        except: pass
+        style.configure("Candy.Vertical.TScrollbar", gripcount=0, background='#80CBC4', 
+                        troughcolor='white', bordercolor='white', lightcolor='#80CBC4',
+                        darkcolor='#80CBC4', arrowsize=0)
 
-游戏特色：
-• 多种游戏模式，满足不同挑战需求
-• 丰富的成就系统，记录您的成长历程
-• 道具系统，提供更多策略选择
-• 积分奖励机制，激励持续游戏
+    def _create_header(self):
+        header = tk.Frame(self.window, bg=UIConfig.COLORS['primary'])
+        header.pack(fill=tk.X, pady=(15, 5))
+        tk.Label(header, text="SCAU 记忆翻牌游戏说明书", 
+                 font=("Microsoft YaHei UI", 26, "bold"),
+                 fg='white', bg=UIConfig.COLORS['primary']).pack()
 
-祝您玩得开心~
-        """
+    def _create_nav_bar(self):
+        nav_frame = tk.Frame(self.window, bg=UIConfig.COLORS['primary'])
+        nav_frame.pack(fill=tk.X, pady=(10, 0))
+        center_frame = tk.Frame(nav_frame, bg=UIConfig.COLORS['primary'])
+        center_frame.pack(anchor=tk.CENTER)
         
-        label = tk.Label(
-            scrollable_frame,
-            text=content.strip(),
-            font=("Arial", 12),
-            fg=UIConfig.COLORS['text_dark'],
-            bg=UIConfig.COLORS['bg_light'],
-            justify=tk.LEFT,
-            wraplength=800
-        )
-        label.pack(padx=20, pady=20, anchor="w")
-        
-    def _create_interface_tab(self, notebook):
-        """创建主界面功能说明选项卡"""
-        frame = tk.Frame(notebook, bg=UIConfig.COLORS['bg_light'])
-        notebook.add(frame, text="📱 主界面功能说明")
-        
-        canvas, scrollbar, scrollable_frame = self._create_scrollable_frame(frame)
-        canvas.pack(side="left", fill="both", expand=True)
-        scrollbar.pack(side="right", fill="y")
-        
-        # 标题
-        title = tk.Label(
-            scrollable_frame,
-            text="主界面包含以下核心功能区：",
-            font=("Arial Rounded MT Bold", 14, "bold"),
-            fg=UIConfig.COLORS['text_dark'],
-            bg=UIConfig.COLORS['bg_light']
-        )
-        title.pack(padx=20, pady=(20, 10), anchor="w")
-        
-        # 功能列表
-        features = [
-            "1. 开始游戏 - 进入游戏模式选择界面，可以选择不同难度和挑战模式开始游戏（具体详见游戏玩法）(*^▽^*)。",
-            "2. 道具商城 - 在商城中，您可以使用游戏积分购买各种实用道具（具体详见道具商城）🎁。",
-            "3. 游戏生涯 - 查看您的游戏记录、成就和进步历程。",
-            "4. 个人主页 - 展示您的个人信息和详细统计数据。"
+        tabs = [
+            ("game_intro", "🎮 游戏简介"),
+            ("interface", "📱 主界面功能"),
+            ("account", "🎁 道具商城"), 
+            ("gameplay", "🎯 游戏玩法"),
+            ("achievements", "🏆 成就系统"),
+            ("points", "💎 积分指南"),
+            ("tips", "📝 游戏技巧") 
         ]
         
-        for feature in features:
-            label = tk.Label(
-                scrollable_frame,
-                text=feature,
-                font=("Arial", 12),
-                fg=UIConfig.COLORS['text_dark'],
-                bg=UIConfig.COLORS['bg_light'],
-                justify=tk.LEFT,
-                wraplength=800
-            )
-            label.pack(padx=40, pady=5, anchor="w")
-            
-    def _create_account_tab(self, notebook):
-        """创道具商城选项卡"""
-        frame = tk.Frame(notebook, bg=UIConfig.COLORS['bg_light'])
-        notebook.add(frame, text="🎁 道具商城")
+        for key, name in tabs:
+            text_len = len(name)
+            btn_w = 100 + (text_len - 4) * 12 if text_len > 4 else 100
+            btn = CandyTabButton(center_frame, text=name, width=btn_w, height=36,
+                                 command=lambda k=key: self._switch_tab(k))
+            btn.pack(side=tk.LEFT, padx=4) 
+            self.tabs[key] = btn
+
+    def _create_content_area(self):
+        container = tk.Frame(self.window, bg=UIConfig.COLORS['primary'], padx=20)
+        container.pack(fill=tk.BOTH, expand=True, pady=(0, 20))
         
-        canvas, scrollbar, scrollable_frame = self._create_scrollable_frame(frame)
-        canvas.pack(side="left", fill="both", expand=True)
-        scrollbar.pack(side="right", fill="y")
+        self.bg_canvas = tk.Canvas(container, bg=UIConfig.COLORS['primary'], highlightthickness=0)
+        self.bg_canvas.pack(fill=tk.BOTH, expand=True)
         
-        content = """
-游戏提供丰富的道具可以使用：
+        self.inner_frame = tk.Frame(self.bg_canvas, bg='white')
+        self.window_item = self.bg_canvas.create_window(0, 0, window=self.inner_frame, anchor='nw')
+        self.bg_canvas.bind('<Configure>', self._on_resize)
 
-·提示道具：价值200积分，帮助您找到一对未配对的卡片位置。
-·时间延长道具：价值300积分，增加30秒游戏时间，适用于限时模式。
-·防洗牌道具：价值400积分，防止下一次因连续失败触发的洗牌。
-·时间静止道具：价值500积分，冻结计时10秒，适用于终极挑战模式。
+    def _on_resize(self, event):
+        w, h = event.width, event.height
+        draw_rounded_rect(self.bg_canvas, 0, 0, w, h, 15, fill='white', tags='bg_rect')
+        self.bg_canvas.tag_lower('bg_rect')
+        self.bg_canvas.tag_raise(self.window_item)
+        inner_w, inner_h = max(1, w - 20), max(1, h - 20)
+        self.bg_canvas.coords(self.window_item, 10, 10)
+        self.bg_canvas.itemconfigure(self.window_item, width=inner_w, height=inner_h)
 
-注意事项：
-• 提示道具在各个模式均可使用，帮助您更轻松找到配对。
-• 时间延长道具仅适用于终极挑战模式，帮助您争取更多时间完成挑战。
-• 防洗牌道具仅在洗牌模式生效，防止因连续失败触发的洗牌。
-• 时间静止道具仅适用于终极挑战模式，冻结倒计时10秒。
-        """
+    def _switch_tab(self, key):
+        if not self.inner_frame: return
+        if self.current_tab: self.tabs[self.current_tab].set_selected(False)
+        self.tabs[key].set_selected(True)
+        self.current_tab = key
         
-        label = tk.Label(
-            scrollable_frame,
-            text=content.strip(),
-            font=("Arial", 12),
-            fg=UIConfig.COLORS['text_dark'],
-            bg=UIConfig.COLORS['bg_light'],
-            justify=tk.LEFT,
-            wraplength=800
-        )
-        label.pack(padx=20, pady=20, anchor="w")
+        for widget in self.inner_frame.winfo_children(): widget.destroy()
+        self._create_scroll_view(key)
+
+    def _create_scroll_view(self, key):
+        scrollbar = ttk.Scrollbar(self.inner_frame, orient="vertical", style="Candy.Vertical.TScrollbar")
+        scrollbar.pack(side=tk.RIGHT, fill=tk.Y, pady=5, padx=(0, 5))
         
-    def _create_gameplay_tab(self, notebook):
-        """创建游戏玩法选项卡"""
-        frame = tk.Frame(notebook, bg=UIConfig.COLORS['bg_light'])
-        notebook.add(frame, text="🎯 游戏玩法")
+        text_widget = tk.Text(self.inner_frame, bg='white', bd=0, 
+                              highlightthickness=0,
+                              font=("Microsoft YaHei UI", 11), 
+                              fg='#333333', 
+                              wrap=tk.WORD,
+                              padx=30, pady=20, 
+                              spacing1=5, spacing2=4, spacing3=5, 
+                              yscrollcommand=scrollbar.set,
+                              cursor='arrow')
         
-        canvas, scrollbar, scrollable_frame = self._create_scrollable_frame(frame)
-        canvas.pack(side="left", fill="both", expand=True)
-        scrollbar.pack(side="right", fill="y")
+        text_widget.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
+        scrollbar.config(command=text_widget.yview)
         
-        # 定义通用样式参数
-        header_font = ("Arial Rounded MT Bold", 14, "bold")
-        sub_header_font = ("Arial Rounded MT Bold", 12, "bold")
-        body_font = ("Arial", 12)
-        text_fg = UIConfig.COLORS['text_dark']
-        bg_color = UIConfig.COLORS['bg_light']
-        wrap_len = 800
+        self._fill_content(text_widget, key)
+        text_widget.config(state='disabled')
 
-        # --- 第一部分：三种游戏模式 ---
-        tk.Label(
-            scrollable_frame,
-            text="一、三种游戏模式 ",
-            font=header_font,
-            fg=text_fg, bg=bg_color
-        ).pack(padx=20, pady=(20, 10), anchor="w")
+    def _fill_content(self, text_widget, key):
+        # --- 标签样式配置 ---
+        text_widget.tag_configure("h1", font=("Microsoft YaHei UI", 16, "bold"), foreground="#00897B", spacing3=10)
+        
+        # 修改：h2 (小标题) 的 spacing1 (段前距) 稍微调大一点，代替换行符，但不要太大
+        text_widget.tag_configure("h2", font=("Microsoft YaHei UI", 13, "bold"), foreground="#00695C", 
+                                  spacing1=15, # 段前距，代替 \n
+                                  spacing3=3)
+        
+        text_widget.tag_configure("body", font=("Microsoft YaHei UI", 11), foreground="#37474F")
+        text_widget.tag_configure("highlight", foreground="#EF6C00", font=("Microsoft YaHei UI", 11, "bold"))
+        
+        text_widget.tag_configure("tip_item", 
+                                  font=("Microsoft YaHei UI", 11), 
+                                  foreground="#37474F",
+                                  lmargin1=30,
+                                  lmargin2=52,
+                                  spacing1=1, 
+                                  spacing2=0, 
+                                  spacing3=1)
+                                  
+        text_widget.tag_configure("italic_footer", 
+                                  font=("Microsoft YaHei UI", 11, "italic"), 
+                                  foreground="#546E7A",
+                                  justify='right',
+                                  spacing1=20)
 
-        modes = [
-            "1. 普通模式 ：默认4x4网格（共16张卡片），无时间限制，适合休闲体验。",
-            "2. 终极挑战模式 ：4x9网格（卡片数量更多），仅120秒时间限制，需快速完成配对。",
-            "3. 洗牌模式：同4x9网格，180秒时间限制；新增“连续失败洗牌”机制——连续7次匹配失误会打乱未配对卡片（有警告提示）。"
-        ]
-        for mode in modes:
-            tk.Label(
-                scrollable_frame, text=mode, font=body_font,
-                fg=text_fg, bg=bg_color, justify=tk.LEFT, wraplength=wrap_len
-            ).pack(padx=40, pady=4, anchor="w")
+        if key == "game_intro": self._content_intro(text_widget)
+        elif key == "interface": self._content_interface(text_widget)
+        elif key == "account": self._content_shop(text_widget)
+        elif key == "gameplay": self._content_gameplay(text_widget)
+        elif key == "achievements": self._content_achievements(text_widget)
+        elif key == "points": self._content_points(text_widget)
+        elif key == "tips": self._content_tips(text_widget)
 
-        # --- 第二部分：核心规则 ---
-        tk.Label(
-            scrollable_frame,
-            text="二、核心规则 ",
-            font=header_font,
-            fg=text_fg, bg=bg_color
-        ).pack(padx=20, pady=(20, 10), anchor="w")
+    # --- 内容填充方法 ---
 
-        rules = [
-            "1. 翻牌配对：每次点击两张卡片，图案/数值相同则保持翻开并消除，不同则自动翻回。",
-            "2. 胜负判定：找出所有配对即通关；限时模式下时间耗尽则挑战失败。"
-        ]
-        for rule in rules:
-            tk.Label(
-                scrollable_frame, text=rule, font=body_font,
-                fg=text_fg, bg=bg_color, justify=tk.LEFT, wraplength=wrap_len
-            ).pack(padx=40, pady=4, anchor="w")
+    def _content_intro(self, t):
+        t.insert(tk.END, "🎮 游戏简介\n", "h1")
+        t.insert(tk.END, "欢迎来到 SCAU 记忆翻牌游戏！\n", "body")
+        t.insert(tk.END, "这是一款考验记忆力、反应力与策略的经典卡牌翻牌游戏。通过翻牌配对来锻炼您的记忆力，解锁成就，提升等级，成为记忆大师！\n\n", "body")
+        t.insert(tk.END, "游戏特色：\n", "h2")
+        t.insert(tk.END, "• 多种游戏模式，满足不同挑战需求\n", "body")
+        t.insert(tk.END, "• 丰富的成就系统，记录您的成长历程\n", "body")
+        t.insert(tk.END, "• 道具系统，提供更多策略选择\n", "body")
+        t.insert(tk.END, "• 积分奖励机制，激励持续游戏\n\n", "body")
+        t.insert(tk.END, "祝您玩得开心~\n", "body")
 
-        # --- 第三部分：操作方式 ---
-        tk.Label(
-            scrollable_frame,
-            text="三、操作方式 ",
-            font=header_font,
-            fg=text_fg, bg=bg_color
-        ).pack(padx=20, pady=(20, 10), anchor="w")
-
-        controls = [
-            "1. 翻牌：点击界面中的卡片即可翻转。",
-            "2. 道具使用：点击底部对应道具按钮（提示、时间延长、防洗牌、时间静止）。",
-            "3. 暂停/继续：游戏中可随时暂停⏸，再次启动即可恢复▶。",
-            "4. 结算：通关或失败后会弹出提示弹窗，确认后返回主界面。"
-        ]
-        for control in controls:
-            tk.Label(
-                scrollable_frame, text=control, font=body_font,
-                fg=text_fg, bg=bg_color, justify=tk.LEFT, wraplength=wrap_len
-            ).pack(padx=40, pady=4, anchor="w")
-
-        # --- 第四部分：道具与特殊机制 ---
-        tk.Label(
-            scrollable_frame,
-            text="四、道具",
-            font=header_font,
-            fg=text_fg, bg=bg_color
-        ).pack(padx=20, pady=(20, 10), anchor="w")
-
+    def _content_interface(self, t):
+        t.insert(tk.END, "📱 主界面功能说明\n", "h1")
+        t.insert(tk.END, "主界面包含以下核心功能区：\n", "h2")
         items = [
-            "• 提示：短暂显示一对未配对卡片的位置，消耗对应道具。",
-            "• 时间延长：限时模式专用，增加30秒剩余时间。",
-            "• 防洗牌：终极洗牌模式专用，阻止下一次因连续失败触发的洗牌。",
-            "• 时间静止：终极挑战模式专用，冻结计时10秒。"
+            ("1. 开始游戏", "进入游戏模式选择界面，可以选择不同难度和挑战模式开始游戏。"),
+            ("2. 道具商城", "在商城中，您可以使用游戏积分购买各种实用道具。"),
+            ("3. 游戏生涯", "查看您的游戏记录、成就和进步历程。"),
+            ("4. 个人主页", "展示您的个人信息和详细统计数据。")
         ]
-        for item in items:
-            tk.Label(
-                scrollable_frame, text=item, font=body_font,
-                fg=text_fg, bg=bg_color, justify=tk.LEFT, wraplength=wrap_len
-            ).pack(padx=40, pady=2, anchor="w")
-        
-        # 底部留白
-        tk.Label(scrollable_frame, text="", bg=bg_color).pack(pady=20)
-            
-    def _create_achievements_tab(self, notebook):
-        """创建成就系统选项卡"""
-        frame = tk.Frame(notebook, bg=UIConfig.COLORS['bg_light'])
-        notebook.add(frame, text="🏆 成就系统")
-        
-        canvas, scrollbar, scrollable_frame = self._create_scrollable_frame(frame)
-        canvas.pack(side="left", fill="both", expand=True)
-        scrollbar.pack(side="right", fill="y")
+        for title, desc in items:
+            t.insert(tk.END, f"{title} - ", "highlight")
+            t.insert(tk.END, f"{desc}\n", "body")
 
-        # 样式配置
-        header_font = ("Arial Rounded MT Bold", 14, "bold")
-        body_font = ("Arial", 12)
-        text_fg = UIConfig.COLORS['text_dark']
-        bg_color = UIConfig.COLORS['bg_light']
-        wrap_len = 800
-
-        # 开头介绍
-        tk.Label(
-            scrollable_frame,
-            text="游戏内置29项成就（28项积分成就+1项隐藏荣誉），达成即领奖励，积分叠加无上限！",
-            font=body_font, fg=text_fg, bg=bg_color, justify=tk.LEFT, wraplength=wrap_len
-        ).pack(padx=20, pady=(20, 10), anchor="w")
-
-        # 数据结构：标题 + 内容列表
-        sections = [
-            ("一、新手必备（5项·简单易拿）", [
-                "1. 完成1场游戏 —— 100分",
-                "2. 首次通关任意模式 —— 50分",
-                "3. 首次使用任意道具 —— 10分",
-                "4. 首次通关终极模式 —— 75分",
-                "5. 普通模式通关10次 —— 300分"
-            ]),
-            ("二、进阶挑战（8项·稳步积累）", [
-                "1. 累计游玩50局 —— 200分",
-                "2. 累计游玩100局 —— 300分",
-                "3. 累计积分达5000分 —— 500分",
-                "4. 普通模式通关30次 —— 300分",
-                "5. 终极模式通关5次 —— 800分",
-                "6. 终极模式通关30次 —— 1000分",
-                "7. 累计使用道具10次 —— 150分",
-                "8. 累计使用道具50次 —— 500分"
-            ]),
-            ("三、高手专属（9项·技术解锁）", [
-                "1. 无道具通关10次 —— 500分",
-                "2. 普通模式零失误通关 —— 666分",
-                "3. 普通模式45秒内通关 —— 300分",
-                "4. 普通模式零失误+50秒内通关 —— 666分",
-                "5. 普通模式通关步数≤32步 —— 320分",
-                "6. 终极模式零失误通关 —— 6666分",
-                "7. 终极模式80秒内通关 —— 600分",
-                "8. 终极模式零失误+100秒内通关 —— 6666分",
-                "9. 终极模式无道具通关5次 —— 1200分"
-            ]),
-            ("四、连胜&活跃（8项·持续参与）", [
-                "1. 连胜3场 —— 200分",
-                "2. 连胜5场 —— 400分",
-                "3. 连胜7场 —— 600分",
-                "4. 连胜10场 —— 1000分",
-                "5. 无道具连胜10场 —— 500分",
-                "6. 终极模式连胜10场 —— 800分",
-                "7. 单日完成10局游戏 —— 200分",
-                "8. 单日用遍4种道具 —— 50分"
-            ]),
-            ("五、隐藏成就（1项·专属荣誉）", [
-                "名称：误闯天家",
-                "触发：通过隐藏操作进入开发者模式（登录界面连续点击Logo等）",
-                "奖励：专属荣誉标识（0积分）",
-                "说明：解锁后仅记录成就，象征探索精神，无实际积分加成"
-            ])
+    def _content_shop(self, t):
+        t.insert(tk.END, "🎁 道具商城\n", "h1")
+        t.insert(tk.END, "游戏提供丰富的道具可以使用：\n", "body")
+        items = [
+            ("· 提示道具", "价值200积分，帮助您找到一对未配对的卡片位置。"),
+            ("· 时间延长道具", "价值300积分，增加30秒游戏时间，适用于限时模式。"),
+            ("· 防洗牌道具", "价值400积分，防止下一次因连续失败触发的洗牌。"),
+            ("· 时间静止道具", "价值500积分，冻结计时10秒，适用于终极挑战模式。")
         ]
-
-        # 循环创建部分
-        for title, items in sections:
-            tk.Label(
-                scrollable_frame, text=title, font=header_font,
-                fg=text_fg, bg=bg_color
-            ).pack(padx=20, pady=(15, 5), anchor="w")
-            
-            for item in items:
-                tk.Label(
-                    scrollable_frame, text=item, font=body_font,
-                    fg=text_fg, bg=bg_color, justify=tk.LEFT, wraplength=wrap_len
-                ).pack(padx=40, pady=2, anchor="w")
-
-        # 底部说明
-        tk.Label(
-            scrollable_frame, text="成就说明：", font=header_font,
-            fg=text_fg, bg=bg_color
-        ).pack(padx=20, pady=(20, 5), anchor="w")
-        
+        for title, desc in items:
+            t.insert(tk.END, f"\n{title}：", "highlight")
+            t.insert(tk.END, f"{desc}", "body")
+        t.insert(tk.END, "\n注意事项：\n", "h2") # h2 自带上边距
         notes = [
-            "1. 所有成就达成后自动解锁，积分实时到账并弹窗提示；",
-            "2. 总计29项成就，覆盖新手到高手全阶段，玩得越久奖励越丰厚！"
+            "• 提示道具在各个模式均可使用，帮助您更轻松找到配对。",
+            "• 时间延长道具仅适用于终极挑战模式，帮助您争取更多时间完成挑战。",
+            "• 防洗牌道具仅在洗牌模式生效，防止因连续失败触发的洗牌。",
+            "• 时间静止道具仅适用于终极挑战模式，冻结倒计时10秒。"
         ]
-        for note in notes:
-            tk.Label(
-                scrollable_frame, text=note, font=body_font,
-                fg=text_fg, bg=bg_color, justify=tk.LEFT, wraplength=wrap_len
-            ).pack(padx=40, pady=2, anchor="w")
+        for n in notes: t.insert(tk.END, f"{n}\n", "body")
 
-        tk.Label(scrollable_frame, text="", bg=bg_color).pack(pady=20)
-        
-    def _create_points_tab(self, notebook):
-        """创建积分获取规则选项卡"""
-        frame = tk.Frame(notebook, bg=UIConfig.COLORS['bg_light'])
-        notebook.add(frame, text="💎 积分获取指南")
-        
-        canvas, scrollbar, scrollable_frame = self._create_scrollable_frame(frame)
-        canvas.pack(side="left", fill="both", expand=True)
-        scrollbar.pack(side="right", fill="y")
-        
-        # 样式配置
-        header_font = ("Arial Rounded MT Bold", 14, "bold")
-        sub_header_font = ("Arial Rounded MT Bold", 12, "bold")
-        body_font = ("Arial", 12)
-        text_fg = UIConfig.COLORS['text_dark']
-        bg_color = UIConfig.COLORS['bg_light']
-        wrap_len = 800
-
-        # 一、初始福利
-        tk.Label(
-            scrollable_frame, text="一、初始登录福利", font=header_font,
-            fg=text_fg, bg=bg_color
-        ).pack(padx=20, pady=(20, 10), anchor="w")
-
-        welfare_items = [
-            "1. 新注册即得500初始积分",
-            "2. 连续登录奖励：3天200分、7天500分、14天600分、30天1200分",
-            "3. 累计登录30天（非连续）：额外300分"
+    def _content_gameplay(self, t):
+        t.insert(tk.END, "🎯 游戏玩法\n", "h1")
+        t.insert(tk.END, "一、三种游戏模式\n", "h2")
+        modes = [
+            "1. 普通模式 ：默认4x4网格，无时间限制，适合休闲体验。",
+            "2. 终极挑战模式 ：4x9网格，仅120秒时间限制，需快速完成配对。",
+            "3. 洗牌模式：同4x9网格，180秒时间限制；连续7次匹配失误会打乱未配对卡片。"
         ]
-        for item in welfare_items:
-            tk.Label(
-                scrollable_frame, text=item, font=body_font,
-                fg=text_fg, bg=bg_color, justify=tk.LEFT, wraplength=wrap_len
-            ).pack(padx=40, pady=2, anchor="w")
+        for m in modes: t.insert(tk.END, f"{m}\n", "body")
+        t.insert(tk.END, "二、核心规则\n", "h2")
+        rules = [
+            "1. 翻牌配对：每次点击两张卡片，图案/数值相同则消除，不同则翻回。",
+            "2. 胜负判定：找出所有配对即通关；限时模式下时间耗尽则失败。"
+        ]
+        for r in rules: t.insert(tk.END, f"{r}\n", "body")
 
-        # 二、通关积分
-        tk.Label(
-            scrollable_frame, text="二、游戏通关积分（最低保障100分）", font=header_font,
-            fg=text_fg, bg=bg_color
-        ).pack(padx=20, pady=(20, 10), anchor="w")
+    def _content_achievements(self, t):
+        t.insert(tk.END, "🏆 成就系统\n", "h1")
+        t.insert(tk.END, "游戏内置29项成就，达成即领奖励！\n", "body")
+        sections = [
+            ("一、新手必备", ["完成1场游戏", "首次通关任意模式", "首次使用任意道具"]),
+            ("二、进阶挑战", ["累计游玩50局", "累计积分达5000分", "终极模式通关5次"]),
+            ("三、高手专属", ["无道具通关10次", "普通模式零失误通关", "终极模式80秒内通关"]),
+            ("四、连胜&活跃", ["连胜3/5/7/10场", "单日完成10局游戏", "连续登录奖励"])
+        ]
+        for title, subs in sections:
+            t.insert(tk.END, f"{title}\n", "h2")
+            for s in subs: t.insert(tk.END, f"• {s}\n", "body")
 
-        game_modes_points = [
-            ("普通模式", [
-                "• 基础分：200分",
-                "• 加分：60秒内+100分、120秒内+50分、零失误+500分",
-                "• 扣分：每次失误-5分"
+    def _content_points(self, t):
+        t.insert(tk.END, "💎 积分获取指南\n", "h1")
+        t.insert(tk.END, "一、初始登录福利\n", "h2")
+        t.insert(tk.END, "新注册即得500初始积分，连续登录有额外奖励。\n", "body")
+        t.insert(tk.END, "二、游戏通关积分\n", "h2")
+        modes = [
+            ("普通模式", "基础分：200分 | 加分：限时/零失误"),
+            ("终极模式", "基础分：1200分 | 加分：限时/零失误")
+        ]
+        for m, desc in modes:
+            t.insert(tk.END, f"{m}\n", "highlight")
+            t.insert(tk.END, f"{desc}\n", "body")
+
+    def _content_tips(self, t):
+        t.insert(tk.END, "🎮 游戏核心技巧\n", "h1")
+
+        sections = [
+            ("1. 记牌小窍门", [
+                "翻牌前3秒分区看（左上→右上→左下→右下），优先记颜色/形状特别的卡牌",
+                "用简单联想记相邻卡牌（比如“月亮+星星=夜空”），减少记忆负担"
             ]),
-            ("终极模式", [
-                "• 基础分：1200分",
-                "• 加分：60秒内+300分、90秒内+150分、零失误+500分",
-                "• 扣分：每次失误-5分"
+            ("2. 道具不浪费", [
+                "时间延长：极限模式剩10秒内用，且已找到2对以上卡牌时",
+                "提示道具：30秒没找到匹配或剩牌少卡顿时用，重点看边缘卡牌",
+                "洗牌道具：10张以上卡牌没思路时，洗牌后重新分区观察"
             ]),
-            ("终极洗牌模式", [
-                "• 基础分：1200分",
-                "• 加分：90秒内+300分、135秒内+150分、零失误+500分",
-                "• 扣分：每次失误-5分"
+            ("3. 模式进阶", [
+                "普通模式：先练准确率（≥80%），翻2次牌复盘1秒",
+                "极限模式：开局10秒只看标记3对，优先翻标记卡牌省时间"
+            ]),
+            ("4. 福利快速拿", [
+                "连续登录3天领道具包，7天解锁限定皮肤",
+                "先做简单成就（如“连配5对”），快速攒积分换道具"
+            ]),
+            ("5. 避坑提醒", [
+                "不频繁乱翻，每配1对停顿0.5秒巩固记忆",
+                "前期少用道具，20分钟后累了就休息5分钟"
             ])
         ]
 
-        for mode_name, points_info in game_modes_points:
-            tk.Label(
-                scrollable_frame, text=mode_name, font=sub_header_font,
-                fg=text_fg, bg=bg_color
-            ).pack(padx=30, pady=(10, 5), anchor="w")
-            for info in points_info:
-                tk.Label(
-                    scrollable_frame, text=info, font=body_font,
-                    fg=text_fg, bg=bg_color, justify=tk.LEFT, wraplength=wrap_len
-                ).pack(padx=50, pady=1, anchor="w")
-
-        # 三、成就额外积分
-        tk.Label(
-            scrollable_frame, text="三、成就额外积分（达成自动解锁）", font=header_font,
-            fg=text_fg, bg=bg_color
-        ).pack(padx=20, pady=(20, 10), anchor="w")
-
-        achieve_cats = [
-            ("新手必备（简单易拿）", [
-                "• 完成1场游戏：100分 | 首次通关任意模式：50分",
-                "• 首次用道具：10分 | 首次过终极模式：75分",
-                "• 普通模式通关10次：300分"
-            ]),
-            ("进阶挑战（稳步积累）", [
-                "• 累计玩50局：200分 | 100局：300分",
-                "• 累计积分5000分：500分",
-                "• 普通模式通关30次：300分",
-                "• 终极模式通关5次：800分 | 30次：1000分",
-                "• 累计用道具10次：150分 | 50次：500分"
-            ]),
-            ("高手专属（技术解锁）", [
-                "• 无道具通关10次：500分",
-                "• 普通模式零失误：666分 | 45秒内通关：300分",
-                "• 普通模式零失误+50秒内：666分 | 步数≤32：320分",
-                "• 终极模式零失误：6666分 | 80秒内通关：600分",
-                "• 终极模式零失误+100秒内：6666分 | 无道具通关5次：1200分"
-            ]),
-            ("连胜&活跃（持续参与）", [
-                "• 连胜3场：200分 | 5场：400分 | 7场：600分 | 10场：1000分",
-                "• 无道具连胜10场：500分 | 终极模式连胜10场：800分",
-                "• 单日玩10局：200分 | 单日用遍4种道具：50分"
-            ])
-        ]
-
-        for cat_name, cat_items in achieve_cats:
-            tk.Label(
-                scrollable_frame, text=cat_name, font=sub_header_font,
-                fg=text_fg, bg=bg_color
-            ).pack(padx=30, pady=(10, 5), anchor="w")
-            for item in cat_items:
-                tk.Label(
-                    scrollable_frame, text=item, font=body_font,
-                    fg=text_fg, bg=bg_color, justify=tk.LEFT, wraplength=wrap_len
-                ).pack(padx=50, pady=1, anchor="w")
-
-        tk.Label(scrollable_frame, text="", bg=bg_color).pack(pady=20)
-        
-    def _create_tips_tab(self, notebook):
-        """创建游戏提示选项卡"""
-        frame = tk.Frame(notebook, bg=UIConfig.COLORS['bg_light'])
-        notebook.add(frame, text="📝 游戏提示")
-        
-        canvas, scrollbar, scrollable_frame = self._create_scrollable_frame(frame)
-        canvas.pack(side="left", fill="both", expand=True)
-        scrollbar.pack(side="right", fill="y")
-        
-        tips = [
-            "• 记住卡牌位置是获胜的关键，建议先观察再翻牌",
-            "• 合理使用道具应对难题，特别是在终极模式中",
-            "• 每天登录获取额外奖励，保持连续登录可获得更多奖励",
-            "• 挑战不同模式锻炼不同能力，逐步提升游戏水平",
-            "• 注意时间限制，在必要时使用时间延长道具",
-            "• 观察卡牌图案特征，有助于快速识别和记忆",
-            "• 在普通模式熟悉规则，在终极模式挑战自我",
-            "• 完成成就不仅能获得成就感，还能获取丰厚积分奖励"
-        ]
-        
-        title = tk.Label(
-            scrollable_frame,
-            text="以下是一些有助于提升游戏体验和成绩的小贴士：",
-            font=("Arial Rounded MT Bold", 14, "bold"),
-            fg=UIConfig.COLORS['text_dark'],
-            bg=UIConfig.COLORS['bg_light']
-        )
-        title.pack(padx=20, pady=(20, 10), anchor="w")
-        
-        for tip in tips:
-            label = tk.Label(
-                scrollable_frame,
-                text=f"• {tip}",
-                font=("Arial", 12),
-                fg=UIConfig.COLORS['text_dark'],
-                bg=UIConfig.COLORS['bg_light'],
-                justify=tk.LEFT,
-                wraplength=800
-            )
-            label.pack(padx=40, pady=5, anchor="w")
+        # 修改：不再使用 \n 强制换行，而是依赖 h2 的 spacing1=15 实现更紧凑的间距
+        for title, items in sections:
+            t.insert(tk.END, f"{title}\n", "h2")
+            for item in items:
+                t.insert(tk.END, f"• {item}\n", "tip_item")
             
-        # 结束语
-        footer = tk.Label(
-            scrollable_frame,
-            text="\n祝您游戏愉快！如有任何问题或建议，请随时反馈。\n",
-            font=("Arial", 12, "italic"),
-            fg=UIConfig.COLORS['text_dark'],
-            bg=UIConfig.COLORS['bg_light']
-        )
-        footer.pack(padx=20, pady=20, anchor="w")
-        
-    def _on_close(self):
-        """关闭窗口"""
-        self.window.destroy()
-        
+        t.insert(tk.END, "\n祝您游戏愉快！有问题随时反馈～\n", "italic_footer")
+
     def show(self):
-        """显示窗口"""
         self.window.deiconify()
         self.window.lift()
         self.window.focus_force()

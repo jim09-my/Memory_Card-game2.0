@@ -89,7 +89,7 @@ class ProfileWindow:
             ("通关数", str(stats['completed_games']), '#66BB6A'),
             ("当前积分", str(self.player.points), '#FFA726'),
             ("连续登录", f"{self.player.consecutive_days}天", '#EC407A'),
-            ("最佳时间", self._fmt_time(stats['best_time_normal']), '#AB47BC'),
+            ("等级", f"Lv.{self.player.level}", '#AB47BC'), # 修改点：最佳时间 -> 等级
             ("注册日期", datetime.fromtimestamp(self.player.created_at).strftime('%y/%m/%d'), '#78909C')
         ]
         
