@@ -118,11 +118,11 @@ class ManualWindow:
         
         tabs = [
             ("game_intro", "🎮 游戏简介"),
-            ("interface", "📱 主界面功能"),
+            ("interface", "📱 界面与账号"),
             ("account", "🎁 道具商城"), 
             ("gameplay", "🎯 游戏玩法"),
             ("achievements", "🏆 成就系统"),
-            ("points", "💎 积分指南"),
+            ("points", "💎 积分获取"), 
             ("tips", "📝 游戏技巧") 
         ]
         
@@ -185,24 +185,30 @@ class ManualWindow:
 
     def _fill_content(self, text_widget, key):
         # --- 标签样式配置 ---
+        # H1: 大标题
         text_widget.tag_configure("h1", font=("Microsoft YaHei UI", 16, "bold"), foreground="#00897B", spacing3=10)
         
-        # 修改：h2 (小标题) 的 spacing1 (段前距) 稍微调大一点，代替换行符，但不要太大
+        # H2: 二级标题 (间距调整)
         text_widget.tag_configure("h2", font=("Microsoft YaHei UI", 13, "bold"), foreground="#00695C", 
-                                  spacing1=15, # 段前距，代替 \n
-                                  spacing3=3)
+                                  spacing1=15, spacing3=5)
+        
+        # H3: 三级标题 (用于替代之前的 ####, 字体稍小但加粗)
+        text_widget.tag_configure("h3", font=("Microsoft YaHei UI", 12, "bold"), foreground="#00796B", 
+                                  spacing1=10, spacing3=2)
         
         text_widget.tag_configure("body", font=("Microsoft YaHei UI", 11), foreground="#37474F")
+        
         text_widget.tag_configure("highlight", foreground="#EF6C00", font=("Microsoft YaHei UI", 11, "bold"))
         
+        # 加粗文本 (替代 ** **)
+        text_widget.tag_configure("bold_text", font=("Microsoft YaHei UI", 11, "bold"), foreground="#37474F")
+        
+        # 列表项 (带缩进)
         text_widget.tag_configure("tip_item", 
                                   font=("Microsoft YaHei UI", 11), 
                                   foreground="#37474F",
-                                  lmargin1=30,
-                                  lmargin2=52,
-                                  spacing1=1, 
-                                  spacing2=0, 
-                                  spacing3=1)
+                                  lmargin1=30, lmargin2=30,
+                                  spacing1=2, spacing2=2)
                                   
         text_widget.tag_configure("italic_footer", 
                                   font=("Microsoft YaHei UI", 11, "italic"), 
@@ -218,128 +224,225 @@ class ManualWindow:
         elif key == "points": self._content_points(text_widget)
         elif key == "tips": self._content_tips(text_widget)
 
-    # --- 内容填充方法 ---
+    # --- 内容填充 ---
 
     def _content_intro(self, t):
         t.insert(tk.END, "🎮 游戏简介\n", "h1")
-        t.insert(tk.END, "欢迎来到 SCAU 记忆翻牌游戏！\n", "body")
-        t.insert(tk.END, "这是一款考验记忆力、反应力与策略的经典卡牌翻牌游戏。通过翻牌配对来锻炼您的记忆力，解锁成就，提升等级，成为记忆大师！\n\n", "body")
-        t.insert(tk.END, "游戏特色：\n", "h2")
-        t.insert(tk.END, "• 多种游戏模式，满足不同挑战需求\n", "body")
-        t.insert(tk.END, "• 丰富的成就系统，记录您的成长历程\n", "body")
-        t.insert(tk.END, "• 道具系统，提供更多策略选择\n", "body")
-        t.insert(tk.END, "• 积分奖励机制，激励持续游戏\n\n", "body")
-        t.insert(tk.END, "祝您玩得开心~\n", "body")
+        t.insert(tk.END, "欢迎来到 SCAU 记忆翻牌游戏！\n这是一款考验记忆力、反应力与策略的经典卡牌翻牌游戏。通过翻牌配对来锻炼您的记忆力，解锁成就，提升等级，成为记忆大师！\n\n", "body")
+        
+        t.insert(tk.END, "游戏特色：\n", "bold_text")
+        features = [
+            "多种游戏模式，满足不同挑战需求",
+            "丰富的成就系统，记录您的成长历程",
+            "道具系统，提供更多策略选择",
+            "积分奖励机制，激励持续游戏"
+        ]
+        for f in features:
+            t.insert(tk.END, f"• {f}\n", "tip_item")
 
     def _content_interface(self, t):
         t.insert(tk.END, "📱 主界面功能说明\n", "h1")
-        t.insert(tk.END, "主界面包含以下核心功能区：\n", "h2")
+        t.insert(tk.END, "主界面包含以下核心功能区：\n", "body")
         items = [
-            ("1. 开始游戏", "进入游戏模式选择界面，可以选择不同难度和挑战模式开始游戏。"),
-            ("2. 道具商城", "在商城中，您可以使用游戏积分购买各种实用道具。"),
+            ("1. 开始游戏", "进入游戏模式选择界面，可以选择不同难度和挑战模式开始游戏（具体详见游戏玩法）(*^▽^*)"),
+            ("2. 道具商城", "在商城中，您可以使用游戏积分购买各种实用道具（具体详见道具商城）🎁"),
             ("3. 游戏生涯", "查看您的游戏记录、成就和进步历程。"),
             ("4. 个人主页", "展示您的个人信息和详细统计数据。")
         ]
         for title, desc in items:
-            t.insert(tk.END, f"{title} - ", "highlight")
-            t.insert(tk.END, f"{desc}\n", "body")
+            t.insert(tk.END, f"{title}", "bold_text")
+            t.insert(tk.END, f" - {desc}\n", "tip_item")
+
+        t.insert(tk.END, "🔑 登录系统\n", "h2")
+        t.insert(tk.END, "游戏提供完整的账号系统：\n", "body")
+        t.insert(tk.END, "• 创建个人账号保存游戏进度\n", "tip_item")
+        t.insert(tk.END, "• 账号数据自动保存\n\n", "tip_item")
+        
+        # --- 修复：注意事项与列表空隙缩小 ---
+        t.insert(tk.END, "注意事项：\n", "bold_text")
+        # 移除前面的 \n，减小空隙
+        t.insert(tk.END, "• 请妥善保管您的账号信息\n", "tip_item")
+        t.insert(tk.END, "• 如忘记密码，请联系管理员处理\n", "tip_item")
+
+        t.insert(tk.END, "👮 管理员系统\n", "h2")
+        admin_items = [
+            "1. 游戏只有一个管理员，账号为 admin, 密码为 123456",
+            "2. 管理员可以查看所有用户的数据，历史记录，得分，注册天数......",
+            "3. 管理员具有修改账户密码的功能，可以帮助用户重置密码",
+            "4. 管理员导出所有用户的数据（json或者csv格式）"
+        ]
+        for item in admin_items:
+            t.insert(tk.END, f"{item}\n", "tip_item")
 
     def _content_shop(self, t):
-        t.insert(tk.END, "🎁 道具商城\n", "h1")
-        t.insert(tk.END, "游戏提供丰富的道具可以使用：\n", "body")
-        items = [
-            ("· 提示道具", "价值200积分，帮助您找到一对未配对的卡片位置。"),
-            ("· 时间延长道具", "价值300积分，增加30秒游戏时间，适用于限时模式。"),
-            ("· 防洗牌道具", "价值400积分，防止下一次因连续失败触发的洗牌。"),
-            ("· 时间静止道具", "价值500积分，冻结计时10秒，适用于终极挑战模式。")
+        t.insert(tk.END, "🛍️ 道具商城系统\n", "h1")
+        shop_items = [
+            ("1. 提示道具", "价值200积分，帮助您找到一对未配对的卡片位置。"),
+            ("2. 时间延长道具", "价值300积分，增加30秒游戏时间，适用于限时模式。"),
+            ("3. 防洗牌道具", "价值400积分，防止下一次因连续失败触发的洗牌。"),
+            ("4. 时间静止道具", "价值500积分，冻结计时10秒，适用于终极挑战模式。")
         ]
-        for title, desc in items:
-            t.insert(tk.END, f"\n{title}：", "highlight")
-            t.insert(tk.END, f"{desc}", "body")
-        t.insert(tk.END, "\n注意事项：\n", "h2") # h2 自带上边距
-        notes = [
-            "• 提示道具在各个模式均可使用，帮助您更轻松找到配对。",
-            "• 时间延长道具仅适用于终极挑战模式，帮助您争取更多时间完成挑战。",
-            "• 防洗牌道具仅在洗牌模式生效，防止因连续失败触发的洗牌。",
-            "• 时间静止道具仅适用于终极挑战模式，冻结倒计时10秒。"
-        ]
-        for n in notes: t.insert(tk.END, f"{n}\n", "body")
+        for title, desc in shop_items:
+            t.insert(tk.END, f"{title}：", "highlight")
+            t.insert(tk.END, f"{desc}\n", "tip_item")
 
     def _content_gameplay(self, t):
-        t.insert(tk.END, "🎯 游戏玩法\n", "h1")
+        t.insert(tk.END, "🕹️ 游戏玩法说明\n", "h1")
+        
         t.insert(tk.END, "一、三种游戏模式\n", "h2")
         modes = [
-            "1. 普通模式 ：默认4x4网格，无时间限制，适合休闲体验。",
-            "2. 终极挑战模式 ：4x9网格，仅120秒时间限制，需快速完成配对。",
-            "3. 洗牌模式：同4x9网格，180秒时间限制；连续7次匹配失误会打乱未配对卡片。"
+            ("1. 普通模式", "默认4x4网格（共16张卡片），无时间限制，适合休闲体验。"),
+            ("2. 终极挑战模式", "4x9网格（卡片数量更多），仅120秒时间限制，需快速完成配对。"),
+            ("3. 终极洗牌模式", "同4x9网格，180秒时间限制；新增“连续失败洗牌”机制——连续7次匹配失误会打乱未配对卡片（有UI警告提示）。")
         ]
-        for m in modes: t.insert(tk.END, f"{m}\n", "body")
+        for title, desc in modes:
+            t.insert(tk.END, f"{title}：", "bold_text")
+            t.insert(tk.END, f"{desc}\n", "tip_item")
+
         t.insert(tk.END, "二、核心规则\n", "h2")
-        rules = [
-            "1. 翻牌配对：每次点击两张卡片，图案/数值相同则消除，不同则翻回。",
-            "2. 胜负判定：找出所有配对即通关；限时模式下时间耗尽则失败。"
+        t.insert(tk.END, "1. 翻牌配对：每次点击两张卡片，图案/数值相同则保持翻开并消除，不同则自动翻回。\n", "tip_item")
+        t.insert(tk.END, "2. 胜负判定：找出所有配对即通关；限时模式下时间耗尽则挑战失败。\n", "tip_item")
+
+        t.insert(tk.END, "三、操作方式\n", "h2")
+        ops = [
+            "1. 翻牌：点击界面中的卡片即可。",
+            "2. 道具使用：点击底部对应道具按钮（提示、时间延长、防洗牌、时间静止）。",
+            "3. 暂停/继续：游戏中可随时暂停，再次启动即可恢复。",
+            "4. 结算：通关或失败后会弹出提示弹窗，确认后返回主界面。"
         ]
-        for r in rules: t.insert(tk.END, f"{r}\n", "body")
+        for op in ops:
+            t.insert(tk.END, f"{op}\n", "tip_item")
+
+        t.insert(tk.END, "四、道具\n", "h2")
+        props = [
+            "• 提示：短暂显示一对未配对卡片的位置，消耗对应道具。",
+            "• 时间延长：限时模式专用，增加30秒剩余时间。",
+            "• 防洗牌：终极洗牌模式专用，阻止下一次因连续失败触发的洗牌。",
+            "• 时间静止：终极挑战模式专用，冻结计时10秒。"
+        ]
+        for p in props:
+            t.insert(tk.END, f"{p}\n", "tip_item")
+        
+        t.insert(tk.END, "\n游戏内置28项积分成就，达成即领奖励，积分叠加无上限！\n", "body")
 
     def _content_achievements(self, t):
-        t.insert(tk.END, "🏆 成就系统\n", "h1")
-        t.insert(tk.END, "游戏内置29项成就，达成即领奖励！\n", "body")
-        sections = [
-            ("一、新手必备", ["完成1场游戏", "首次通关任意模式", "首次使用任意道具"]),
-            ("二、进阶挑战", ["累计游玩50局", "累计积分达5000分", "终极模式通关5次"]),
-            ("三、高手专属", ["无道具通关10次", "普通模式零失误通关", "终极模式80秒内通关"]),
-            ("四、连胜&活跃", ["连胜3/5/7/10场", "单日完成10局游戏", "连续登录奖励"])
-        ]
-        for title, subs in sections:
-            t.insert(tk.END, f"{title}\n", "h2")
-            for s in subs: t.insert(tk.END, f"• {s}\n", "body")
-
-    def _content_points(self, t):
-        t.insert(tk.END, "💎 积分获取指南\n", "h1")
-        t.insert(tk.END, "一、初始登录福利\n", "h2")
-        t.insert(tk.END, "新注册即得500初始积分，连续登录有额外奖励。\n", "body")
-        t.insert(tk.END, "二、游戏通关积分\n", "h2")
-        modes = [
-            ("普通模式", "基础分：200分 | 加分：限时/零失误"),
-            ("终极模式", "基础分：1200分 | 加分：限时/零失误")
-        ]
-        for m, desc in modes:
-            t.insert(tk.END, f"{m}\n", "highlight")
-            t.insert(tk.END, f"{desc}\n", "body")
-
-    def _content_tips(self, t):
-        t.insert(tk.END, "🎮 游戏核心技巧\n", "h1")
+        t.insert(tk.END, "🎖️ 成就系统\n", "h1")
+        t.insert(tk.END, "特色：", "bold_text")
+        t.insert(tk.END, "按类别梳理用户所获得的成就（入门-成长-技术-挑战-活跃-连胜），一共设置了28个成就。\n\n", "body")
+        t.insert(tk.END, "具体的成就可查看成就系统\n", "body")
 
         sections = [
-            ("1. 记牌小窍门", [
-                "翻牌前3秒分区看（左上→右上→左下→右下），优先记颜色/形状特别的卡牌",
-                "用简单联想记相邻卡牌（比如“月亮+星星=夜空”），减少记忆负担"
+            ("一、新手必备（5项·简单易拿）", [
+                "1. 完成1场游戏 —— 100分", "2. 首次通关任意模式 —— 50分",
+                "3. 首次使用任意道具 —— 10分", "4. 首次通关终极模式 —— 75分",
+                "5. 普通模式通关10次 —— 300分"
             ]),
-            ("2. 道具不浪费", [
-                "时间延长：极限模式剩10秒内用，且已找到2对以上卡牌时",
-                "提示道具：30秒没找到匹配或剩牌少卡顿时用，重点看边缘卡牌",
-                "洗牌道具：10张以上卡牌没思路时，洗牌后重新分区观察"
+            ("二、进阶挑战（8项·稳步积累）", [
+                "1. 累计游玩50局 —— 200分", "2. 累计游玩100局 —— 300分",
+                "3. 累计积分达5000分 —— 500分", "4. 普通模式通关30次 —— 300分",
+                "5. 终极模式通关5次 —— 800分", "6. 终极模式通关30次 —— 1000分",
+                "7. 累计使用道具10次 —— 150分", "8. 累计使用道具50次 —— 500分"
             ]),
-            ("3. 模式进阶", [
-                "普通模式：先练准确率（≥80%），翻2次牌复盘1秒",
-                "极限模式：开局10秒只看标记3对，优先翻标记卡牌省时间"
+            ("三、高手专属（9项·技术解锁）", [
+                "1. 无道具通关10次 —— 500分", "2. 普通模式零失误通关 —— 666分",
+                "3. 普通模式45秒内通关 —— 300分", "4. 普通模式零失误+50秒内通关 —— 666分",
+                "5. 普通模式通关步数≤32步 —— 320分", "6. 终极模式零失误通关 —— 6666分",
+                "7. 终极模式80秒内通关 —— 600分", "8. 终极模式零失误+100秒内通关 —— 6666分",
+                "9. 终极模式无道具通关5次 —— 1200分"
             ]),
-            ("4. 福利快速拿", [
-                "连续登录3天领道具包，7天解锁限定皮肤",
-                "先做简单成就（如“连配5对”），快速攒积分换道具"
-            ]),
-            ("5. 避坑提醒", [
-                "不频繁乱翻，每配1对停顿0.5秒巩固记忆",
-                "前期少用道具，20分钟后累了就休息5分钟"
+            ("四、连胜&活跃（8项·持续参与）", [
+                "1. 连胜3场 —— 200分", "2. 连胜5场 —— 400分",
+                "3. 连胜7场 —— 600分", "4. 连胜10场 —— 1000分",
+                "5. 无道具连胜10场 —— 500分", "6. 终极模式连胜10场 —— 800分",
+                "7. 单日完成10局游戏 —— 200分", "8. 单日用遍4种道具 —— 50分"
             ])
         ]
-
-        # 修改：不再使用 \n 强制换行，而是依赖 h2 的 spacing1=15 实现更紧凑的间距
+        
         for title, items in sections:
             t.insert(tk.END, f"{title}\n", "h2")
-            for item in items:
-                t.insert(tk.END, f"• {item}\n", "tip_item")
-            
+            for i in items:
+                t.insert(tk.END, f"{i}\n", "tip_item")
+
+        t.insert(tk.END, "\n成就说明\n", "h2")
+        t.insert(tk.END, "1. 所有成就达成后自动解锁，积分实时到账并弹窗提示；\n", "tip_item")
+        t.insert(tk.END, "2. 总计28项成就，覆盖新手到高手全阶段，玩得越久奖励越丰厚！\n", "tip_item")
+
+    def _content_points(self, t):
+        t.insert(tk.END, "🏆 积分获取指南\n", "h1")
+        
+        t.insert(tk.END, "一、初始登录福利\n", "h2")
+        t.insert(tk.END, "1. 新注册即得500初始积分\n", "tip_item")
+        t.insert(tk.END, "2. 连续登录奖励：3天200分、7天500分、14天600分、30天1200分\n", "tip_item")
+        t.insert(tk.END, "3. 累计登录30天（非连续）：额外300分\n", "tip_item")
+
+        t.insert(tk.END, "二、游戏通关积分（最低保障100分）\n", "h2")
+        
+        # --- 修复：去除 ####，改为 h3 样式 ---
+        t.insert(tk.END, "普通模式\n", "h3")
+        t.insert(tk.END, "• 基础分：200分\n", "tip_item")
+        t.insert(tk.END, "• 加分：60秒内+100分、120秒内+50分、零失误+500分\n", "tip_item")
+        t.insert(tk.END, "• 扣分：每次失误-5分\n", "tip_item")
+
+        t.insert(tk.END, "终极模式\n", "h3")
+        t.insert(tk.END, "• 基础分：1200分\n", "tip_item")
+        t.insert(tk.END, "• 加分：60秒内+300分、90秒内+150分、零失误+500分\n", "tip_item")
+        t.insert(tk.END, "• 扣分：每次失误-5分\n", "tip_item")
+
+        t.insert(tk.END, "终极洗牌模式\n", "h3")
+        t.insert(tk.END, "• 基础分：1200分\n", "tip_item")
+        t.insert(tk.END, "• 加分：90秒内+300分、135秒内+150分、零失误+500分\n", "tip_item")
+        t.insert(tk.END, "• 扣分：每次失误-5分\n", "tip_item")
+
+        t.insert(tk.END, "三、成就额外积分（达成自动解锁）\n", "h2")
+        # --- 修复：去除 ####，改为 h3 样式 ---
+        t.insert(tk.END, "新手必备（简单易拿）\n", "h3")
+        t.insert(tk.END, "• 完成1场游戏：100分\n", "tip_item")
+        t.insert(tk.END, "• 首次通关任意模式：50分\n", "tip_item")
+        t.insert(tk.END, "• 首次用道具：10分\n", "tip_item")
+        t.insert(tk.END, "• 首次过终极模式：75分\n", "tip_item")
+        t.insert(tk.END, "• 普通模式通关10次：300分\n", "tip_item")
+
+        t.insert(tk.END, "进阶挑战（稳步积累）\n", "h3")
+        t.insert(tk.END, "• 累计玩50局：200分、100局：300分\n", "tip_item")
+        t.insert(tk.END, "• 累计积分5000分：500分\n", "tip_item")
+        t.insert(tk.END, "• 普通模式通关30次：300分\n", "tip_item")
+        t.insert(tk.END, "• 终极模式通关5次：800分、30次：1000分\n", "tip_item")
+        t.insert(tk.END, "• 累计用道具10次：150分、50次：500分\n", "tip_item")
+
+        t.insert(tk.END, "高手专属（技术解锁）\n", "h3")
+        t.insert(tk.END, "• 无道具通关10次：500分\n", "tip_item")
+        t.insert(tk.END, "• 普通模式零失误：666分、45秒内通关：300分、零失误+50秒内：666分、步数≤32：320分\n", "tip_item")
+        t.insert(tk.END, "• 终极模式零失误：6666分、80秒内通关：600分、零失误+100秒内：6666分、无道具通关5次：1200分\n", "tip_item")
+
+        t.insert(tk.END, "连胜&活跃（持续参与）\n", "h3")
+        t.insert(tk.END, "• 连胜3场：200分、5场：400分、7场：600分、10场：1000分\n", "tip_item")
+        t.insert(tk.END, "• 无道具连胜10场：500分、终极模式连胜10场：800分\n", "tip_item")
+        t.insert(tk.END, "• 单日玩10局：200分、单日用遍4种道具：50分\n", "tip_item")
+
+    def _content_tips(self, t):
+        t.insert(tk.END, "💡 游戏核心技巧\n", "h1")
+
+        t.insert(tk.END, "1. 记牌小窍门\n", "h2")
+        t.insert(tk.END, "- 翻牌前3秒分区看（左上→右上→左下→右下），优先记颜色/形状特别的卡牌\n", "tip_item")
+        t.insert(tk.END, "- 用简单联想记相邻卡牌（比如“月亮+星星=夜空”），减少记忆负担\n", "tip_item")
+
+        t.insert(tk.END, "2. 道具不浪费\n", "h2")
+        t.insert(tk.END, "- 时间延长：极限模式剩10秒内用，且已找到2对以上卡牌时\n", "tip_item")
+        t.insert(tk.END, "- 提示道具：30秒没找到匹配或剩牌少卡顿时用，重点看边缘卡牌\n", "tip_item")
+        t.insert(tk.END, "- 洗牌道具：10张以上卡牌没思路时，洗牌后重新分区观察\n", "tip_item")
+
+        t.insert(tk.END, "3. 模式进阶\n", "h2")
+        t.insert(tk.END, "- 普通模式：先练准确率（≥80%），翻2次牌复盘1秒\n", "tip_item")
+        t.insert(tk.END, "- 极限模式：开局10秒只看标记3对，优先翻标记卡牌省时间\n", "tip_item")
+
+        t.insert(tk.END, "4. 福利快速拿\n", "h2")
+        t.insert(tk.END, "- 连续登录3天领道具包，7天解锁限定皮肤\n", "tip_item")
+        t.insert(tk.END, "- 先做简单成就（如“连配5对”），快速攒积分换道具\n", "tip_item")
+
+        t.insert(tk.END, "5. 避坑提醒\n", "h2")
+        t.insert(tk.END, "- 不频繁乱翻，每配1对停顿0.5秒巩固记忆\n", "tip_item")
+        t.insert(tk.END, "- 前期少用道具，20分钟后累了就休息5分钟\n", "tip_item")
+
         t.insert(tk.END, "\n祝您游戏愉快！有问题随时反馈～\n", "italic_footer")
 
     def show(self):

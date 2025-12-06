@@ -670,7 +670,7 @@
       "win_streak_5"
     ],
     "created_at": 1763647736.8366134,
-    "last_login": 1764997038.2418885,
+    "last_login": 1764999666.366826,
     "consecutive_days": 2,
     "game_records": [
       {
@@ -978,7 +978,7 @@
       "login_streak_3"
     ],
     "created_at": 1763993571.5211844,
-    "last_login": 1764951988.3189197,
+    "last_login": 1764999951.3509538,
     "consecutive_days": 2,
     "game_records": [
       {
@@ -1175,6 +1175,38 @@
           "undo": 0
         },
         "timestamp": 1764997859.6102393
+      }
+    ],
+    "benefits": {
+      "free_hint_redeemed": false
+    }
+  },
+  "233": {
+    "username": "233",
+    "password": "123456",
+    "points": 500,
+    "level": 1,
+    "experience": 0,
+    "total_points_earned": 0,
+    "total_games": 1,
+    "completed_games": 0,
+    "total_moves": 0,
+    "total_time": 120.06499934196472,
+    "best_records_normal": [],
+    "best_records_ultimate": [],
+    "items": {},
+    "achievements": [],
+    "created_at": 1764999130.1989753,
+    "last_login": 1765001043.2744725,
+    "consecutive_days": 1,
+    "game_records": [
+      {
+        "mode": "ultimate",
+        "completed": false,
+        "time_used": 120.06499934196472,
+        "moves": 0,
+        "reward": 0,
+        "timestamp": 1764999259.9806623
       }
     ],
     "benefits": {
