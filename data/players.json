@@ -1,7 +1,6 @@
 {
   "123": {
     "username": "123",
-    "email": "123",
     "password": "",
     "points": 110,
     "level": 2,
@@ -103,7 +102,7 @@
   "1234": {
     "username": "1234",
     "password": "123456",
-    "points": 1250,
+    "points": 2400,
     "level": 11,
     "experience": 0,
     "total_points_earned": 10550,
@@ -118,9 +117,7 @@
       ]
     ],
     "best_records_ultimate": [],
-    "items": {
-      "shuffle_prevent": 1
-    },
+    "items": {},
     "achievements": [
       "first_game",
       "login_streak_3",
@@ -141,8 +138,8 @@
       "no_item_streak_10"
     ],
     "created_at": 1763548912.416925,
-    "last_login": 1764956356.350336,
-    "consecutive_days": 2,
+    "last_login": 1764932736.7237048,
+    "consecutive_days": 1,
     "game_records": [
       {
         "mode": "normal",
@@ -845,7 +842,6 @@
   },
   "aab": {
     "username": "aab",
-    "email": "",
     "password": "123456",
     "points": 500,
     "level": 1,
@@ -869,7 +865,6 @@
   },
   "root": {
     "username": "root",
-    "email": "",
     "password": "123456",
     "points": 486925,
     "level": 3,
@@ -1065,7 +1060,6 @@
   },
   "114514": {
     "username": "114514",
-    "email": "",
     "password": "222333",
     "points": 500,
     "level": 1,
@@ -1085,73 +1079,6 @@
     "game_records": [],
     "benefits": {
       "free_hint_redeemed": false
-    }
-  },
-  "cjm": {
-    "username": "cjm",
-    "password": "123456",
-    "points": 250,
-    "level": 1,
-    "experience": 0,
-    "total_points_earned": 150,
-    "total_games": 1,
-    "completed_games": 1,
-    "total_moves": 28,
-    "total_time": 60,
-    "best_records_normal": [
-      [
-        60,
-        {
-          "mode": "normal",
-          "grid_size": 4,
-          "username": "cjm",
-          "completed": true,
-          "time_used": 60,
-          "moves": 28,
-          "mistakes": 20,
-          "score": 62,
-          "reward": 150,
-          "items_used": {
-            "hint": 0,
-            "time_extend": 0,
-            "shuffle_prevent": 0,
-            "undo": 0
-          },
-          "timestamp": 1764956812.5191479
-        }
-      ]
-    ],
-    "best_records_ultimate": [],
-    "items": {
-      "hint": 1,
-      "shuffle_prevent": 1
-    },
-    "achievements": [],
-    "created_at": 1764956733.7133565,
-    "last_login": 1764957240.9463372,
-    "consecutive_days": 1,
-    "game_records": [
-      {
-        "mode": "normal",
-        "grid_size": 4,
-        "username": "cjm",
-        "completed": true,
-        "time_used": 60,
-        "moves": 28,
-        "mistakes": 20,
-        "score": 62,
-        "reward": 150,
-        "items_used": {
-          "hint": 0,
-          "time_extend": 0,
-          "shuffle_prevent": 0,
-          "undo": 0
-        },
-        "timestamp": 1764956812.5191479
-      }
-    ],
-    "benefits": {
-      "free_hint_redeemed": true
     }
   }
 }
