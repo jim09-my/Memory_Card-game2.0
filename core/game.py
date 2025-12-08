@@ -325,6 +325,39 @@ class Game:
         self.timer.resume()
         return True
 
+    # === 新增：统一的成就检查函数 ===
+    def _check_achievements(self):
+        """检查并解锁成就（支持通关和失败时调用）"""
+        if not self.player:
+            return
+            
+        try:
+            # 遍历成就配置
+            for ach in getattr(AchievementConfig, 'ACHIEVEMENTS', []):
+                aid = ach.get('id')
+                if not aid or not ach.get('condition'):
+                    continue
+                
+                # 如果已经拥有该成就，跳过
+                if self.player.has_achievement(aid):
+                    continue
+
+                # 运行判定条件 (config.py 中定义的 lambda)
+                # 此时 self.player 已经包含了本局的记录，所以 count 类的成就能正常统计
+                if ach['condition'](self.player):
+                    self.player.unlock_achievement(aid)
+                    
+                    # 发放奖励
+                    if ach.get('reward'): 
+                        self.player.add_points(ach['reward'])
+                    
+                    # 持久化已解锁成就
+                    try: 
+                        add_unlocked_achievement(self.player.username, aid)
+                    except: pass
+        except Exception as e:
+            print(f"Achievement check failed: {e}")
+
     def complete_game(self):
         if self.is_completed: return
         self.is_completed = True
@@ -351,16 +384,8 @@ class Game:
             self.player.add_game_record(record)
             self.player.add_points(reward)
             
-            try:
-                for ach in getattr(AchievementConfig, 'ACHIEVEMENTS', []):
-                    aid = ach.get('id')
-                    if aid and ach.get('condition') and ach.get('condition')(self.player):
-                        if not self.player.has_achievement(aid):
-                            self.player.unlock_achievement(aid)
-                            if ach.get('reward'): self.player.add_points(ach['reward'])
-                            try: add_unlocked_achievement(self.player.username, aid)
-                            except: pass
-            except: pass
+            # === 修改：调用统一的检查函数 ===
+            self._check_achievements()
             
             try: save_player(self.player)
             except: pass
@@ -389,7 +414,13 @@ class Game:
             }
             try: append_record(record)
             except: pass
+            
+            # 必须先添加记录，否则 'first_game' 或 'persistent_50' 等基于次数的成就无法检测到本局
             self.player.add_game_record(record)
+            
+            # === 修改：失败时也检查成就 (修复如"毅力十足"累计场次不触发的问题) ===
+            self._check_achievements()
+
             try: save_player(self.player)
             except: pass
             try: 

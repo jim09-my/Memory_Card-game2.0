@@ -423,9 +423,8 @@ class ManualWindow:
         t.insert(tk.END, "💡 游戏核心技巧\n", "h1")
 
         t.insert(tk.END, "1. 记牌小窍门\n", "h2")
-        t.insert(tk.END, "- 翻牌前3秒分区看（左上→右上→左下→右下），优先记颜色/形状特别的卡牌\n", "tip_item")
-        t.insert(tk.END, "- 用简单联想记相邻卡牌（比如“月亮+星星=夜空”），减少记忆负担\n", "tip_item")
-
+        t.insert(tk.END, "- 翻牌前3秒分区看（左上→右上→左下→右下），优先记红黑颜色和数字特征（比如10是两位数，或8/0这类形状独特的数字）\n", "tip_item")
+        t.insert(tk.END, "- 用花色/数字关联记相邻牌（比如“♡5+♡6=红桃连号”“♡3+♢3=红色3兄弟”），减少记忆负担\n", "tip_item")
         t.insert(tk.END, "2. 道具不浪费\n", "h2")
         t.insert(tk.END, "- 时间延长：极限模式剩10秒内用，且已找到2对以上卡牌时\n", "tip_item")
         t.insert(tk.END, "- 提示道具：30秒没找到匹配或剩牌少卡顿时用，重点看边缘卡牌\n", "tip_item")

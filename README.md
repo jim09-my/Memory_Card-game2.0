@@ -79,9 +79,8 @@ Memory_Card-game2.0/
 - Tkinter GUI界面设计
 - JSON数据持久化
 
-## 开发者
+## 开发
 
-- 基于SCAU计算机学院课程项目开发
 - 使用Python 3.13+
 - 使用Tkinter GUI库
 
