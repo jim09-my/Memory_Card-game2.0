@@ -112,6 +112,16 @@ class AchievementConfig:
             else: break
         return streak
     @staticmethod
+    def current_win_streak_by_ultimate(p):
+        streak = 0
+        records = p.get_all_records() if hasattr(p, 'get_all_records') else list(p.game_records)
+        for r in sorted(records, key=lambda x: x.get('timestamp',0), reverse=True):
+            if r.get('completed') and r.get('mode') in ('ultimate','ultimate_shuffle'):
+                streak += 1
+            else:
+                break
+        return streak
+    @staticmethod
     def current_win_streak_no_item(p):
         streak = 0
         records = p.get_all_records() if hasattr(p, 'get_all_records') else list(p.game_records)
@@ -121,6 +131,80 @@ class AchievementConfig:
                 streak += 1
             else: break
         return streak
+    @staticmethod
+    def count_completed_by_mode(p, mode):
+        records = p.get_all_records() if hasattr(p, 'get_all_records') else list(p.game_records)
+        return sum(1 for r in records if r.get('completed') and r.get('mode') == mode)
+    @staticmethod
+    def sum_items_used_total(p):
+        total = 0
+        records = p.get_all_records() if hasattr(p, 'get_all_records') else list(p.game_records)
+        for r in records:
+            iu = r.get('items_used', {})
+            if isinstance(iu, dict):
+                total += sum(iu.values())
+        return total
+    @staticmethod
+    def count_no_item_completions(p):
+        records = p.get_all_records() if hasattr(p, 'get_all_records') else list(p.game_records)
+        return sum(1 for r in records if r.get('completed') and all((r.get('items_used',{}).get(k,0)==0) for k in ['hint','time_extend','shuffle_prevent','undo']))
+    @staticmethod
+    def has_first_ultimate_win(p):
+        records = p.get_all_records() if hasattr(p, 'get_all_records') else list(p.game_records)
+        return any(r.get('completed') and r.get('mode') in ('ultimate','ultimate_shuffle') for r in records)
+    @staticmethod
+    def has_first_item_use(p):
+        return AchievementConfig.sum_items_used_total(p) >= 1
+    @staticmethod
+    def did_break_normal_record(p):
+        records = p.get_all_records() if hasattr(p, 'get_all_records') else list(p.game_records)
+        if not records:
+            return False
+        last = records[-1]
+        if not last.get('completed') or last.get('mode') != 'normal':
+            return False
+        last_time = last.get('time_used', 0)
+        prev_times = [r.get('time_used', 0) for r in records[:-1] if r.get('completed') and r.get('mode') == 'normal' and r.get('time_used', 0) > 0]
+        if not prev_times:
+            return False
+        return last_time > 0 and last_time < min(prev_times)
+    @staticmethod
+    def last_record(p):
+        records = p.get_all_records() if hasattr(p, 'get_all_records') else list(p.game_records)
+        return records[-1] if records else None
+    @staticmethod
+    def speedrunner_normal_45(p):
+        last = AchievementConfig.last_record(p)
+        return bool(last and last.get('completed') and last.get('mode') == 'normal' and last.get('time_used', 9999) <= 45)
+    @staticmethod
+    def speedrunner_ultimate_80(p):
+        last = AchievementConfig.last_record(p)
+        return bool(last and last.get('completed') and last.get('mode') in ('ultimate','ultimate_shuffle') and last.get('time_used', 9999) <= 80)
+    @staticmethod
+    def low_moves_normal_32(p):
+        last = AchievementConfig.last_record(p)
+        return bool(last and last.get('completed') and last.get('mode') == 'normal' and last.get('moves', 9999) <= 32)
+    @staticmethod
+    def perfect_combo_normal_50(p):
+        last = AchievementConfig.last_record(p)
+        return bool(last and last.get('completed') and last.get('mode') == 'normal' and last.get('mistakes', 1) == 0 and last.get('time_used', 9999) <= 50)
+    @staticmethod
+    def perfect_combo_ultimate_100(p):
+        last = AchievementConfig.last_record(p)
+        return bool(last and last.get('completed') and last.get('mode') in ('ultimate','ultimate_shuffle') and last.get('mistakes', 1) == 0 and last.get('time_used', 9999) <= 100)
+    @staticmethod
+    def ultimate_no_item_5(p):
+        records = p.get_all_records() if hasattr(p, 'get_all_records') else list(p.game_records)
+        def no_item(r):
+            iu = r.get('items_used', {})
+            return isinstance(iu, dict) and sum(iu.values()) == 0
+        return sum(1 for r in records if r.get('completed') and r.get('mode') in ('ultimate','ultimate_shuffle') and no_item(r)) >= 5
+    @staticmethod
+    def total_login_days(p):
+        days = getattr(p, 'login_days', None)
+        if isinstance(days, (set, list)):
+            return len(days)
+        return 0
     @staticmethod
     def _day_key(ts):
         try: return datetime.fromtimestamp(ts).strftime('%Y-%m-%d')
@@ -149,36 +233,36 @@ class AchievementConfig:
         
     ACHIEVEMENTS = [
         {'id': 'first_game', 'name': '初次尝试', 'description': '完成第一场游戏', 'category': '入门', 'reward': 100, 'icon': '🎮', 'condition': lambda p: getattr(p, 'total_games', 0) >= 1},
-        {'id': 'normal_master', 'name': '普通大师', 'description': '普通模式通关10次', 'category': '入门', 'reward': 300, 'icon': '🏆', 'condition': lambda p: True},
-        {'id': 'ultimate_conqueror', 'name': '终极征服者', 'description': '终极模式通关5次', 'category': '挑战', 'reward': 800, 'icon': '👑', 'condition': lambda p: True},
+        {'id': 'normal_master', 'name': '普通大师', 'description': '普通模式通关10次', 'category': '入门', 'reward': 300, 'icon': '🏆', 'condition': lambda p: AchievementConfig.count_completed_by_mode(p, 'normal') >= 10},
+        {'id': 'ultimate_conqueror', 'name': '终极征服者', 'description': '终极模式通关5次', 'category': '挑战', 'reward': 800, 'icon': '👑', 'condition': lambda p: AchievementConfig.count_completed_by_mode(p, 'ultimate') + AchievementConfig.count_completed_by_mode(p, 'ultimate_shuffle') >= 5},
         {'id': 'persistent_50', 'name': '毅力十足', 'description': '累计游玩50局', 'category': '成长', 'reward': 200, 'icon': '🔁', 'condition': lambda p: getattr(p, 'total_games', 0) >= 50},
-        {'id': 'item_user_10', 'name': '工具达人', 'description': '累计使用道具10次', 'category': '活跃', 'reward': 150, 'icon': '🧰', 'condition': lambda p: True},
-        {'id': 'no_item_10', 'name': '清心寡欲', 'description': '无道具通关10次', 'category': '技术', 'reward': 500, 'icon': '🚫', 'condition': lambda p: True},
+        {'id': 'item_user_10', 'name': '工具达人', 'description': '累计使用道具10次', 'category': '活跃', 'reward': 150, 'icon': '🧰', 'condition': lambda p: AchievementConfig.sum_items_used_total(p) >= 10},
+        {'id': 'no_item_10', 'name': '清心寡欲', 'description': '无道具通关10次', 'category': '技术', 'reward': 500, 'icon': '🚫', 'condition': lambda p: AchievementConfig.count_no_item_completions(p) >= 10},
         {'id': 'win_streak_3', 'name': '连胜三场', 'description': '连续通关3场', 'category': '连胜', 'reward': 200, 'icon': '💥', 'condition': lambda p: AchievementConfig.current_win_streak(p) >= 3},
         {'id': 'win_streak_5', 'name': '势不可挡', 'description': '连续通关5场', 'category': '连胜', 'reward': 400, 'icon': '⚡', 'condition': lambda p: AchievementConfig.current_win_streak(p) >= 5},
         {'id': 'login_streak_3', 'name': '活跃签到·3', 'description': '连续登录3天', 'category': '活跃', 'reward': 200, 'icon': '📅', 'condition': lambda p: p.consecutive_days >= 3},
         {'id': 'login_streak_7', 'name': '活跃签到·7', 'description': '连续登录7天', 'category': '活跃', 'reward': 500, 'icon': '📆', 'condition': lambda p: p.consecutive_days >= 7},
         {'id': 'first_win', 'name': '首胜加冕', 'description': '首次通关任意模式', 'category': '入门', 'reward': 50, 'icon': '🥇', 'condition': lambda p: p.completed_games >= 1},
-        {'id': 'first_ultimate_win', 'name': '初试终极', 'description': '首次通关终极模式', 'category': '入门', 'reward': 75, 'icon': '🧗', 'condition': lambda p: True},
-        {'id': 'first_item_use', 'name': '初用道具', 'description': '首次使用任意道具', 'category': '入门', 'reward': 10, 'icon': '🧰', 'condition': lambda p: True},
-        {'id': 'record_break_normal', 'name': '打破个人纪录', 'description': '刷新普通模式个人最佳用时', 'category': '入门', 'reward': 100, 'icon': '⏱️', 'condition': lambda p: p.best_time_normal is not None},
+        {'id': 'first_ultimate_win', 'name': '初试终极', 'description': '首次通关终极模式', 'category': '入门', 'reward': 75, 'icon': '🧗', 'condition': lambda p: AchievementConfig.has_first_ultimate_win(p)},
+        {'id': 'first_item_use', 'name': '初用道具', 'description': '首次使用任意道具', 'category': '入门', 'reward': 10, 'icon': '🧰', 'condition': lambda p: AchievementConfig.has_first_item_use(p)},
+        {'id': 'record_break_normal', 'name': '打破个人纪录', 'description': '刷新普通模式个人最佳用时', 'category': '入门', 'reward': 100, 'icon': '⏱️', 'condition': lambda p: AchievementConfig.did_break_normal_record(p)},
         {'id': 'persistent_100', 'name': '百战不殆', 'description': '累计游玩100局', 'category': '成长', 'reward': 300, 'icon': '📈', 'condition': lambda p: getattr(p, 'total_games', 0) >= 100},
         {'id': 'points_5000', 'name': '千分达人', 'description': '累计获得积分达到5000', 'category': '成长', 'reward': 500, 'icon': '💎', 'condition': lambda p: getattr(p, 'total_points_earned', 0) >= 5000},
-        {'id': 'normal_master_30', 'name': '普通老练', 'description': '普通模式通关30次', 'category': '成长', 'reward': 300, 'icon': '🏆', 'condition': lambda p: True},
-        {'id': 'ultimate_conqueror_30', 'name': '终极精进', 'description': '终极模式通关30次', 'category': '成长', 'reward': 1000, 'icon': '👑', 'condition': lambda p: True},
-        {'id': 'login_total_30', 'name': '常回家看看', 'description': '累计登录天数30（非连续）', 'category': '成长', 'reward': 300, 'icon': '📅', 'condition': lambda p: True},
-        {'id': 'item_user_50', 'name': '道具达人', 'description': '累计使用道具50次', 'category': '成长', 'reward': 500, 'icon': '🧰', 'condition': lambda p: True},
-        {'id': 'flawless_normal', 'name': '零失误·普通', 'description': '普通模式失误数为0通关', 'category': '技术', 'reward': 666, 'icon': '🧠', 'condition': lambda p: True},
-        {'id': 'flawless_ultimate', 'name': '零失误·终极', 'description': '终极模式失误数为0通关', 'category': '技术', 'reward': 6666, 'icon': '🧠', 'condition': lambda p: True},
-        {'id': 'speedrunner_normal_45', 'name': '速通·普通', 'description': '普通模式45秒内通关', 'category': '技术', 'reward': 300, 'icon': '⚡', 'condition': lambda p: True},
-        {'id': 'speedrunner_ultimate_80', 'name': '速通·终极', 'description': '终极模式80秒内通关', 'category': '技术', 'reward': 600, 'icon': '⚡', 'condition': lambda p: True},
-        {'id': 'low_moves_normal_32', 'name': '省步高手', 'description': '普通模式通关步数<=32', 'category': '技术', 'reward': 320, 'icon': '🪜', 'condition': lambda p: True},
-        {'id': 'perfect_combo_normal_50', 'name': '无双·普通', 'description': '普通模式零失误且≤50秒通关', 'category': '技术', 'reward': 666, 'icon': '🎯', 'condition': lambda p: True},
-        {'id': 'perfect_combo_ultimate_100', 'name': '无双·终极', 'description': '终极模式零失误且≤100秒通关', 'category': '技术', 'reward': 6666, 'icon': '🎯', 'condition': lambda p: True},
-        {'id': 'ultimate_no_item_5', 'name': '终极无道具5', 'description': '终极模式无道具通关5次', 'category': '技术', 'reward': 1200, 'icon': '🏅', 'condition': lambda p: True},
+        {'id': 'normal_master_30', 'name': '普通老练', 'description': '普通模式通关30次', 'category': '成长', 'reward': 300, 'icon': '🏆', 'condition': lambda p: AchievementConfig.count_completed_by_mode(p, 'normal') >= 30},
+        {'id': 'ultimate_conqueror_30', 'name': '终极精进', 'description': '终极模式通关30次', 'category': '成长', 'reward': 1000, 'icon': '👑', 'condition': lambda p: AchievementConfig.count_completed_by_mode(p, 'ultimate') + AchievementConfig.count_completed_by_mode(p, 'ultimate_shuffle') >= 30},
+        {'id': 'login_total_30', 'name': '常回家看看', 'description': '累计登录天数30（非连续）', 'category': '成长', 'reward': 300, 'icon': '📅', 'condition': lambda p: AchievementConfig.total_login_days(p) >= 30},
+        {'id': 'item_user_50', 'name': '道具达人', 'description': '累计使用道具50次', 'category': '成长', 'reward': 500, 'icon': '🧰', 'condition': lambda p: AchievementConfig.sum_items_used_total(p) >= 50},
+        {'id': 'flawless_normal', 'name': '零失误·普通', 'description': '普通模式失误数为0通关', 'category': '技术', 'reward': 666, 'icon': '🧠', 'condition': lambda p: any(r.get('completed') and r.get('mode')=='normal' and r.get('mistakes',1)==0 for r in (p.get_all_records() if hasattr(p,'get_all_records') else list(p.game_records)))},
+        {'id': 'flawless_ultimate', 'name': '零失误·终极', 'description': '终极模式失误数为0通关', 'category': '技术', 'reward': 6666, 'icon': '🧠', 'condition': lambda p: any(r.get('completed') and r.get('mode') in ('ultimate','ultimate_shuffle') and r.get('mistakes',1)==0 for r in (p.get_all_records() if hasattr(p,'get_all_records') else list(p.game_records)))},
+        {'id': 'speedrunner_normal_45', 'name': '速通·普通', 'description': '普通模式45秒内通关', 'category': '技术', 'reward': 300, 'icon': '⚡', 'condition': lambda p: AchievementConfig.speedrunner_normal_45(p)},
+        {'id': 'speedrunner_ultimate_80', 'name': '速通·终极', 'description': '终极模式80秒内通关', 'category': '技术', 'reward': 600, 'icon': '⚡', 'condition': lambda p: AchievementConfig.speedrunner_ultimate_80(p)},
+        {'id': 'low_moves_normal_32', 'name': '省步高手', 'description': '普通模式通关步数<=32', 'category': '技术', 'reward': 320, 'icon': '🪜', 'condition': lambda p: AchievementConfig.low_moves_normal_32(p)},
+        {'id': 'perfect_combo_normal_50', 'name': '无双·普通', 'description': '普通模式零失误且≤50秒通关', 'category': '技术', 'reward': 666, 'icon': '🎯', 'condition': lambda p: AchievementConfig.perfect_combo_normal_50(p)},
+        {'id': 'perfect_combo_ultimate_100', 'name': '无双·终极', 'description': '终极模式零失误且≤100秒通关', 'category': '技术', 'reward': 6666, 'icon': '🎯', 'condition': lambda p: AchievementConfig.perfect_combo_ultimate_100(p)},
+        {'id': 'ultimate_no_item_5', 'name': '终极无道具5', 'description': '终极模式无道具通关5次', 'category': '技术', 'reward': 1200, 'icon': '🏅', 'condition': lambda p: AchievementConfig.ultimate_no_item_5(p)},
         {'id': 'win_streak_7', 'name': '七连胜', 'description': '连续通关7场', 'category': '连胜', 'reward': 600, 'icon': '💥', 'condition': lambda p: AchievementConfig.current_win_streak(p) >= 7},
         {'id': 'win_streak_10', 'name': '十连胜', 'description': '连续通关10场', 'category': '连胜', 'reward': 1000, 'icon': '🔥', 'condition': lambda p: AchievementConfig.current_win_streak(p) >= 10},
-        {'id': 'ultimate_streak_10', 'name': '终极十连', 'description': '终极模式连续通关10场', 'category': '连胜', 'reward': 800, 'icon': '⚡', 'condition': lambda p: AchievementConfig.current_win_streak_by_mode(p, 'ultimate') >= 10},
+        {'id': 'ultimate_streak_10', 'name': '终极十连', 'description': '终极模式连续通关10场', 'category': '连胜', 'reward': 800, 'icon': '⚡', 'condition': lambda p: AchievementConfig.current_win_streak_by_ultimate(p) >= 10},
         {'id': 'no_item_streak_10', 'name': '无道具十连', 'description': '无道具连续通关10场', 'category': '连胜', 'reward': 500, 'icon': '🛡️', 'condition': lambda p: AchievementConfig.current_win_streak_no_item(p) >= 10},
         {'id': 'login_streak_14', 'name': '活跃签到·14', 'description': '连续登录14天', 'category': '活跃', 'reward': 600, 'icon': '📅', 'condition': lambda p: p.consecutive_days >= 14},
         {'id': 'login_streak_30', 'name': '活跃签到·30', 'description': '连续登录30天', 'category': '活跃', 'reward': 1200, 'icon': '📆', 'condition': lambda p: p.consecutive_days >= 30},

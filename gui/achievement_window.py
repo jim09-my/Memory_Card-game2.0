@@ -225,7 +225,7 @@ class AchievementWindow:
             cur = sum(1 for r in records if r.get('mode')=='normal' and r.get('completed'))
             return cur, 10
         if aid == 'ultimate_conqueror':
-            cur = sum(1 for r in records if r.get('mode')=='ultimate' and r.get('completed'))
+            cur = sum(1 for r in records if r.get('mode') in ('ultimate','ultimate_shuffle') and r.get('completed'))
             return cur, 5
         if aid == 'persistent_50':
             return len(records), 50

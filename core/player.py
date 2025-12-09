@@ -57,6 +57,12 @@ class Player:
         self.created_at = time.time()
         self.last_login = time.time()
         self.consecutive_days = 1
+        # 新增：登录历史（用于非连续累计登录判定）
+        try:
+            today_key = datetime.now().strftime('%Y-%m-%d')
+        except Exception:
+            today_key = None
+        self.login_days = set([today_key]) if today_key else set()
 
         # 监听器（用于 UI 更新等）
         self._listeners = []
@@ -226,6 +232,11 @@ class Player:
             print("连续登录已重置")
 
         self.last_login = now
+        # 记录登录日期到历史集合
+        try:
+            self.login_days.add(today.strftime('%Y-%m-%d'))
+        except Exception:
+            pass
 
     def get_statistics(self):
         # 从堆中获取最佳记录
@@ -274,6 +285,7 @@ class Player:
             'consecutive_days': self.consecutive_days,
             'game_records': self.game_records.to_list(),  # Queue -> list
             'benefits': self.benefits
+            , 'login_days': sorted(list(self.login_days))
         }
 
     @classmethod
@@ -316,6 +328,10 @@ class Player:
         player.created_at = data.get('created_at', time.time())
         player.last_login = data.get('last_login', time.time())
         player.consecutive_days = data.get('consecutive_days', 1)
+        try:
+            player.login_days = set(data.get('login_days', []))
+        except Exception:
+            player.login_days = set()
         
         # 恢复游戏记录（list -> Queue）
         records_list = data.get('game_records', [])

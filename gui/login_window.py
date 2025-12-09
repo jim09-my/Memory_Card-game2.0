@@ -323,8 +323,9 @@ class LoginWindow:
         player.update_login()
         for ach in getattr(AchievementConfig, 'ACHIEVEMENTS', []):
             aid = ach.get('id')
-            if isinstance(aid, str) and aid.startswith('login_streak_'):
-                if ach.get('condition')(player) and not player.has_achievement(aid):
+            if isinstance(aid, str) and aid.startswith('login_'):
+                cond = ach.get('condition')
+                if callable(cond) and cond(player) and not player.has_achievement(aid):
                     player.unlock_achievement(aid)
                     if ach.get('reward', 0): player.add_points(ach['reward'])
                     add_unlocked_achievement(player.username, aid)
