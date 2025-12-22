@@ -1,26 +1,20 @@
 """
-玩家类 - 完整数据结构版
-使用：Queue（游戏记录）、HashTable（道具库存）、Heap（最佳成绩 Top N）
+玩家类
 """
 
 import json
 import time
 from datetime import datetime, timedelta
 
-# === 导入自定义数据结构 ===
 from data_structures.queue import Queue
 from data_structures.hash_table import ItemInventory
-from data_structures.heap import TopNRecords  # <--- 新增：使用堆来管理最佳记录
+from data_structures.heap import TopNRecords 
 
 class Player:
     """玩家类"""
 
     def __init__(self, username, password=''):
-        """
-        初始化玩家（邮箱字段已移除）
-        :param username: 用户名
-        :param password: 登录密码
-        """
+
         self.username = username
         self.password = password
         self.points = 500  # 初始积分
@@ -33,16 +27,12 @@ class Player:
         self.completed_games = 0
         self.total_moves = 0
         self.total_time = 0
-        
-        # === 使用 Heap (TopNRecords) 管理最佳成绩 (Top 5) ===
-        # 以前只是 best_time_normal = None，现在我们用最小堆保留前5个最快时间
+
         self.best_records_normal = TopNRecords(n=5, mode='min')
         self.best_records_ultimate = TopNRecords(n=5, mode='min')
 
-        # === 使用 Queue 管理游戏记录 ===
         self.game_records = Queue(max_size=50)
 
-        # === 使用 HashTable 管理道具库存 ===
         self.items = ItemInventory()
 
         # 成就列表
@@ -57,24 +47,21 @@ class Player:
         self.created_at = time.time()
         self.last_login = time.time()
         self.consecutive_days = 1
-        # 新增：登录历史（用于非连续累计登录判定）
         try:
             today_key = datetime.now().strftime('%Y-%m-%d')
         except Exception:
             today_key = None
         self.login_days = set([today_key]) if today_key else set()
 
-        # 监听器（用于 UI 更新等）
         self._listeners = []
 
     def add_game_record(self, record):
-        """添加游戏记录（使用 Queue 和 Heap）"""
+        """添加游戏记录"""
         record['timestamp'] = time.time()
         
         # 1. 入队 (Queue)
         self.game_records.enqueue(record)
 
-        # 更新统计
         self.total_games += 1
         if record.get('completed'):
             self.completed_games += 1
@@ -86,11 +73,9 @@ class Player:
         if record.get('completed'):
             mode = record.get('mode')
             time_used = record.get('time_used', 0)
-            
-            # 只有当时间有效时才记录
+
             if time_used > 0:
                 if mode == 'normal':
-                    # 将时间作为 key 插入堆中，记录本身作为 data
                     self.best_records_normal.add_record(time_used, record)
                 elif mode == 'ultimate' or mode == 'ultimate_shuffle':
                     self.best_records_ultimate.add_record(time_used, record)
@@ -101,8 +86,7 @@ class Player:
             pass
 
     def get_all_records(self):
-        """获取所有游戏记录（返回列表）"""
-        # Queue 对象不可迭代，必须调用 to_list()
+        """获取所有游戏记录"""
         return self.game_records.to_list()
 
     def add_points(self, amount):
@@ -136,7 +120,7 @@ class Player:
             print(f"🎉 恭喜升级！{old_level} -> {self.level}")
 
     def add_item(self, item_id, quantity=1):
-        """添加道具（使用 HashTable）"""
+        """添加道具"""
         self.items.add_item(item_id, quantity)
         try:
             self._notify_listeners()
@@ -144,7 +128,7 @@ class Player:
             pass
 
     def use_item(self, item_id, quantity=1):
-        """使用道具（使用 HashTable）"""
+        """使用道具"""
         success = self.items.use_item(item_id, quantity)
         if success:
             try:
@@ -154,11 +138,11 @@ class Player:
         return success
 
     def get_item_count(self, item_id):
-        """获取道具数量（使用 HashTable）"""
+        """获取道具数量"""
         return self.items.get_item_count(item_id)
 
     def has_item(self, item_id, quantity=1):
-        """检查是否拥有道具（使用 HashTable）"""
+        """检查是否拥有道具"""
         return self.items.has_item(item_id, quantity)
 
     def add_change_listener(self, callback):
@@ -207,7 +191,7 @@ class Player:
     def get_average_time(self):
         if self.completed_games == 0:
             return 0
-        # 修正：调用 get_all_records() 而不是直接访问 queue
+        
         records_list = self.get_all_records()
         total_completed_time = sum(r.get('time_used', 0) for r in records_list if r.get('completed'))
         return total_completed_time / self.completed_games
@@ -232,14 +216,12 @@ class Player:
             print("连续登录已重置")
 
         self.last_login = now
-        # 记录登录日期到历史集合
         try:
             self.login_days.add(today.strftime('%Y-%m-%d'))
         except Exception:
             pass
 
     def get_statistics(self):
-        # 从堆中获取最佳记录
         best_normal_record = self.best_records_normal.get_best()
         best_normal_time = best_normal_record[0] if best_normal_record else None
         
@@ -263,7 +245,7 @@ class Player:
         }
 
     def to_dict(self):
-        """序列化（将数据结构转为 JSON 兼容格式）"""
+        """序列化"""
         return {
             'username': self.username,
             'password': self.password,
@@ -275,23 +257,21 @@ class Player:
             'completed_games': self.completed_games,
             'total_moves': self.total_moves,
             'total_time': self.total_time,
-            # 保存堆数据 (TopNRecords -> List)
             'best_records_normal': self.best_records_normal.get_top_n(), 
             'best_records_ultimate': self.best_records_ultimate.get_top_n(),
-            'items': dict(self.items.get_all_items()),  # HashTable -> dict
+            'items': dict(self.items.get_all_items()), 
             'achievements': self.achievements,
             'created_at': self.created_at,
             'last_login': self.last_login,
             'consecutive_days': self.consecutive_days,
-            'game_records': self.game_records.to_list(),  # Queue -> list
+            'game_records': self.game_records.to_list(), 
             'benefits': self.benefits
             , 'login_days': sorted(list(self.login_days))
         }
 
     @classmethod
     def from_dict(cls, data):
-        """反序列化（从 dict 恢复数据结构）"""
-        # 兼容旧数据：旧数据可能包含 'email' 字段，但构造函数已移除该参数
+        """反序列化"""
         player = cls(data['username'], data.get('password', ''))
         player.points = data.get('points', 500)
         player.level = data.get('level', 1)
@@ -303,7 +283,6 @@ class Player:
         player.total_time = data.get('total_time', 0)
 
         # 恢复最佳记录堆
-        # 注意：JSON中保存的是 [(time, record), ...] 列表
         best_normal_list = data.get('best_records_normal', [])
         for val, rec in best_normal_list:
             player.best_records_normal.add_record(val, rec)
@@ -312,13 +291,12 @@ class Player:
         for val, rec in best_ultimate_list:
             player.best_records_ultimate.add_record(val, rec)
             
-        # 兼容旧数据：如果堆为空但有旧的 best_time 字段
         if player.best_records_normal.heap.is_empty() and data.get('best_time_normal'):
             player.best_records_normal.add_record(data['best_time_normal'], {})
         if player.best_records_ultimate.heap.is_empty() and data.get('best_time_ultimate'):
              player.best_records_ultimate.add_record(data['best_time_ultimate'], {})
 
-        # 恢复道具（dict -> HashTable）
+        # 恢复道具
         items_dict = data.get('items', {})
         player.items = ItemInventory()
         for item_id, quantity in items_dict.items():
@@ -333,7 +311,7 @@ class Player:
         except Exception:
             player.login_days = set()
         
-        # 恢复游戏记录（list -> Queue）
+        # 恢复游戏记录
         records_list = data.get('game_records', [])
         player.game_records = Queue(max_size=50)
         for record in records_list:

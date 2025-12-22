@@ -12,7 +12,6 @@ class Timer:
     def __init__(self, time_limit=None):
         """
         初始化计时器
-        :param time_limit: 时间限制（秒），None表示无限制
         """
         self.time_limit = time_limit
         self.start_time = None
@@ -52,7 +51,6 @@ class Timer:
     def stop(self):
         """停止计时"""
         if self.is_running:
-            # 记录停止时间，供 get_elapsed_time 计算
             self.pause_time = time.time()
             self.is_running = False
             self.is_paused = False
@@ -70,7 +68,6 @@ class Timer:
     def get_elapsed_time(self):
         """
         获取已用时间（秒）
-        :return: 已用时间，未开始返回0
         """
         if self.start_time is None:
             return 0
@@ -87,7 +84,6 @@ class Timer:
     def get_remaining_time(self):
         """
         获取剩余时间（秒）
-        :return: 剩余时间，无限制返回None，超时返回0
         """
         if self.time_limit is None:
             return None
@@ -98,7 +94,6 @@ class Timer:
     def is_time_up(self):
         """
         检查时间是否用完
-        :return: 是否超时
         """
         if self.time_limit is None:
             return False
@@ -117,8 +112,6 @@ class Timer:
     def format_time(self, seconds):
         """
         格式化时间显示
-        :param seconds: 秒数
-        :return: 格式化的时间字符串 (MM:SS)
         """
         if seconds is None:
             return "00:00"
@@ -130,7 +123,6 @@ class Timer:
     def get_time_display(self):
         """
         获取时间显示字符串
-        :return: 时间显示
         """
         if self.time_limit is None:
             # 无限制，显示已用时间
@@ -144,7 +136,6 @@ class Timer:
     def get_status(self):
         """
         获取计时器状态
-        :return: 状态字典
         """
         return {
             'is_running': self.is_running,

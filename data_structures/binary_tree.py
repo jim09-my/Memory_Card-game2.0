@@ -15,7 +15,6 @@ class TreeNode:
 class BinarySearchTree:
     """
     二叉搜索树实现
-    左子树所有节点 < 根节点 < 右子树所有节点
     """
     def __init__(self):
         self.root = None
@@ -32,8 +31,6 @@ class BinarySearchTree:
     def insert(self, key, data=None):
         """
         插入节点
-        :param key: 键值（用于排序）
-        :param data: 节点数据
         """
         if self.root is None:
             self.root = TreeNode(key, data)
@@ -62,8 +59,6 @@ class BinarySearchTree:
     def search(self, key):
         """
         查找节点
-        :param key: 要查找的键
-        :return: 节点数据，未找到返回None
         """
         return self._search_recursive(self.root, key)
 
@@ -82,8 +77,6 @@ class BinarySearchTree:
     def delete(self, key):
         """
         删除节点
-        :param key: 要删除的键
-        :return: 成功返回True，失败返回False
         """
         if self.root is None:
             return False
@@ -108,18 +101,14 @@ class BinarySearchTree:
             # 找到要删除的节点
             deleted = True
 
-            # 情况1：叶子节点
             if node.left is None and node.right is None:
                 return None, deleted
 
-            # 情况2：只有一个子节点
             if node.left is None:
                 return node.right, deleted
             if node.right is None:
                 return node.left, deleted
 
-            # 情况3：有两个子节点
-            # 找到右子树的最小节点（后继节点）
             min_node = self._find_min(node.right)
             node.key = min_node.key
             node.data = min_node.data
@@ -421,23 +410,18 @@ class AVLTree(BinarySearchTree):
 class Leaderboard:
     """
     排行榜系统
-    使用AVL树实现高效的排行榜管理
     """
     def __init__(self, mode='time'):
         """
         初始化排行榜
-        :param mode: 排序模式 'time'(时间越少越好) 或 'score'(分数越高越好)
         """
         self.tree = AVLTree()
         self.mode = mode
-        self.records = {}  # 存储完整记录 {key: record}
+        self.records = {} 
 
     def add_record(self, player_name, value, **kwargs):
         """
         添加记录
-        :param player_name: 玩家名称
-        :param value: 排序值（时间或分数）
-        :param kwargs: 其他记录信息
         """
         record = {
             'player_name': player_name,
@@ -445,7 +429,7 @@ class Leaderboard:
             **kwargs
         }
 
-        # 生成唯一键（避免重复）
+        # 生成唯一键
         import time
         key = value + time.time() / 1000000
 
@@ -457,8 +441,6 @@ class Leaderboard:
     def get_top_n(self, n=10):
         """
         获取前N名
-        :param n: 数量
-        :return: 记录列表
         """
         all_records = self.tree.inorder_traversal()
 
@@ -475,8 +457,6 @@ class Leaderboard:
     def get_rank(self, player_name):
         """
         获取玩家排名
-        :param player_name: 玩家名称
-        :return: 排名（从1开始），未找到返回-1
         """
         all_records = self.tree.inorder_traversal()
 
@@ -492,8 +472,6 @@ class Leaderboard:
     def get_player_best(self, player_name):
         """
         获取玩家最佳成绩
-        :param player_name: 玩家名称
-        :return: 最佳记录，未找到返回None
         """
         player_records = [
             (key, data) for key, data in self.tree.inorder_traversal()

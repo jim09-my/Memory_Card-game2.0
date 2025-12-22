@@ -16,13 +16,11 @@ class HashNode:
 class HashTable:
     """
     哈希表实现
-    使用链地址法解决冲突
     """
 
     def __init__(self, capacity=100):
         """
         初始化哈希表
-        :param capacity: 初始容量
         """
         self.capacity = capacity
         self.size = 0
@@ -32,8 +30,6 @@ class HashTable:
     def _hash(self, key):
         """
         哈希函数
-        :param key: 键
-        :return: 哈希值
         """
         if isinstance(key, int):
             return key % self.capacity
@@ -50,7 +46,6 @@ class HashTable:
     def _rehash(self):
         """
         重新哈希（扩容）
-        当负载因子超过阈值时，扩大容量并重新分配所有元素
         """
         print(f"重新哈希：容量从 {self.capacity} 扩大到 {self.capacity * 2}")
 
@@ -73,8 +68,6 @@ class HashTable:
     def put(self, key, value):
         """
         插入或更新键值对
-        :param key: 键
-        :param value: 值
         """
         # 检查是否需要扩容
         if self.get_load_factor() > self.load_factor_threshold:
@@ -100,8 +93,6 @@ class HashTable:
     def get(self, key):
         """
         获取值
-        :param key: 键
-        :return: 值，不存在返回None
         """
         index = self._hash(key)
         current = self.table[index]
@@ -116,16 +107,12 @@ class HashTable:
     def contains(self, key):
         """
         检查键是否存在
-        :param key: 键
-        :return: 存在返回True，否则返回False
         """
         return self.get(key) is not None
 
     def remove(self, key):
         """
         删除键值对
-        :param key: 键
-        :return: 成功返回True，失败返回False
         """
         index = self._hash(key)
         head = self.table[index]
@@ -153,7 +140,6 @@ class HashTable:
     def keys(self):
         """
         获取所有键
-        :return: 键列表
         """
         result = []
         for head in self.table:
@@ -166,7 +152,6 @@ class HashTable:
     def values(self):
         """
         获取所有值
-        :return: 值列表
         """
         result = []
         for head in self.table:
@@ -179,7 +164,6 @@ class HashTable:
     def items(self):
         """
         获取所有键值对
-        :return: (键, 值) 元组列表
         """
         result = []
         for head in self.table:
@@ -205,7 +189,6 @@ class HashTable:
     def get_statistics(self):
         """
         获取哈希表统计信息
-        :return: 统计字典
         """
         # 计算链长度分布
         chain_lengths = []
@@ -245,23 +228,19 @@ class HashTable:
         return self.size
 
     def __getitem__(self, key):
-        """支持 table[key] 语法"""
         value = self.get(key)
         if value is None:
             raise KeyError(f"Key '{key}' not found")
         return value
 
     def __setitem__(self, key, value):
-        """支持 table[key] = value 语法"""
         self.put(key, value)
 
     def __delitem__(self, key):
-        """支持 del table[key] 语法"""
         if not self.remove(key):
             raise KeyError(f"Key '{key}' not found")
 
     def __contains__(self, key):
-        """支持 key in table 语法"""
         return self.contains(key)
 
 

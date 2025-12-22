@@ -21,7 +21,6 @@ class Queue:
     def __init__(self, max_size=None):
         """
         初始化队列
-        :param max_size: 最大容量，None表示无限制
         """
         self.front = None
         self.rear = None
@@ -41,8 +40,6 @@ class Queue:
     def enqueue(self, data):
         """
         入队操作
-        :param data: 要入队的数据
-        :return: 成功返回True，失败返回False
         """
         # 如果队列已满，删除最前面的元素（FIFO覆盖）
         if self.is_full():
@@ -64,7 +61,6 @@ class Queue:
     def dequeue(self):
         """
         出队操作
-        :return: 队首元素，队空则返回None
         """
         if self.is_empty():
             print("队列为空，无法出队！")
@@ -82,7 +78,6 @@ class Queue:
     def peek(self):
         """
         查看队首元素但不删除
-        :return: 队首元素，队空则返回None
         """
         if self.is_empty():
             return None
@@ -130,7 +125,6 @@ class CircularQueue:
     def __init__(self, max_size):
         """
         初始化循环队列
-        :param max_size: 队列最大容量
         """
         self.max_size = max_size
         self.queue = [None] * max_size
@@ -202,7 +196,6 @@ class GameRecordQueue:
     def add_record(self, game_record):
         """
         添加游戏记录
-        :param game_record: 游戏记录字典
         """
         self.records.enqueue(game_record)
         print(f"记录已添加，当前记录数：{self.records.get_size()}")
@@ -214,7 +207,6 @@ class GameRecordQueue:
     def get_recent_records(self, n=10):
         """
         获取最近N条记录
-        :param n: 记录数量
         """
         all_records = self.records.to_list()
         return all_records[-n:] if len(all_records) > n else all_records
@@ -222,7 +214,6 @@ class GameRecordQueue:
     def get_best_score(self, mode='normal'):
         """
         获取指定模式的最佳成绩
-        :param mode: 游戏模式
         """
         records = [r for r in self.records.to_list()
                    if r.get('mode') == mode and r.get('completed')]

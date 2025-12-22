@@ -8,8 +8,8 @@ from managers.data_manager import load_players, save_players
 from core.player import Player
 
 # --- 配置颜色 ---
-BORDER_COLOR = "#B2DFDB"  # 主题浅色边框
-SHADOW_COLOR = "#E0F2F1"  # 极浅阴影
+BORDER_COLOR = "#B2DFDB" 
+SHADOW_COLOR = "#E0F2F1"
 
 # --- 绘图辅助函数 ---
 def draw_shadow_panel(canvas, x, y, w, h, r, bg_color, border_color=BORDER_COLOR, shadow_color=SHADOW_COLOR, tags="panel"):
@@ -239,11 +239,10 @@ class AdminWindow:
         r_lbl_frame.pack(side=tk.TOP, fill=tk.X, pady=(5, 10))
         tk.Label(r_lbl_frame, text="📄 档案详情", font=('Microsoft YaHei UI', 12, 'bold'), bg='white', fg='#455A64').pack(side=tk.LEFT, padx=10)
         
-        # --- 关键修改：按钮区 (先 pack BOTTOM，确保固定在底部) ---
+
         btn_bar = tk.Frame(right_content, bg='white')
         btn_bar.pack(side=tk.BOTTOM, fill=tk.X, pady=(10, 5))
         
-        # 按钮：右对齐 (side=RIGHT)
         # 刷新列表
         RoundButton(btn_bar, "刷新列表", self.load_users, 
                     bg_color='#26A69A', hover_color='#4DB6AC').pack(side=tk.RIGHT, padx=10)
@@ -252,9 +251,7 @@ class AdminWindow:
         RoundButton(btn_bar, "重置密码", self.reset_user_password, 
                     bg_color='#FF7043', hover_color='#FF8A65').pack(side=tk.RIGHT, padx=10)
 
-        # --- 文本框 (填充剩余空间) ---
         text_container = tk.Frame(right_content, bg='white')
-        # 放在标题下面，按钮上面
         text_container.pack(side=tk.TOP, fill=tk.BOTH, expand=True) 
         
         text_scroll = ttk.Scrollbar(text_container, orient="vertical", style="Admin.Vertical.TScrollbar")
@@ -268,7 +265,7 @@ class AdminWindow:
 
         if hasattr(self, 'users_data'): self._populate_listbox()
 
-    # --- 导出界面 (保持不变) ---
+    # --- 导出界面 ---
     def _build_export(self):
         container = tk.Frame(self.content_area, bg='white')
         container.pack(expand=True, fill=tk.BOTH, padx=50, pady=30)
@@ -329,7 +326,7 @@ class AdminWindow:
         
         self.detail_text.config(state='normal')
         self.detail_text.delete(1.0, tk.END)
-        # 配置 Tag (样式)
+        # 配置 Tag 样式
         self.detail_text.tag_config('h_section', font=('Microsoft YaHei UI', 12, 'bold'), foreground='#2896A0', spacing1=20, spacing3=10)
         self.detail_text.tag_config('dashed_line', font=('Arial', 10), foreground='#E0E0E0', justify='center')
         self.detail_text.tag_config('key', font=('Microsoft YaHei UI', 11), foreground='#78909C', spacing1=5)
@@ -384,15 +381,14 @@ class AdminWindow:
             return datetime.datetime.fromtimestamp(timestamp).strftime("%Y-%m-%d %H:%M")
         except: return str(timestamp)
             
-    # --- 修复后的重置密码逻辑 ---
+    # --- 重置密码 ---
     def reset_user_password(self):
         selection = self.user_listbox.curselection()
         if not selection:
             messagebox.showwarning("警告", "请先选择一个用户")
             return
         username = self.user_listbox.get(selection[0])
-        
-        # 保护管理员账号不被修改
+
         if username.lower() in ["root", "admin"]:
             messagebox.showwarning("警告", "不能重置管理员账户密码")
             return
@@ -411,7 +407,7 @@ class AdminWindow:
             save_players(self.users_data)
             
             messagebox.showinfo("成功", f"用户 {username} 的密码已重置")
-            self.display_user_details(username) # 刷新详情显示
+            self.display_user_details(username) 
         except Exception as e:
             messagebox.showerror("错误", f"重置密码失败: {str(e)}")
             

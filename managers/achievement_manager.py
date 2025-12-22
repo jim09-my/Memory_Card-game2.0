@@ -1,7 +1,5 @@
 """
 简易成就管理器
-如果 data/achievements.json 为空，会用 config 中的默认成就初始化。
-提供简单的查询/解锁接口。
 """
 from managers.data_manager import load_achievements, save_achievements
 from config import AchievementConfig

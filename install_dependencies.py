@@ -3,17 +3,14 @@ import sys
 import os
 
 def install_dependencies():
-    """Install required dependencies for the Memory Card Game"""
     print("Installing dependencies for Memory Card Game...")
     
-    # Read requirements from requirements.txt
     requirements_file = os.path.join(os.path.dirname(__file__), "requirements.txt")
     
     if not os.path.exists(requirements_file):
         print("ERROR: requirements.txt not found!")
         return False
     
-    # Install dependencies using pip
     try:
         cmd = [sys.executable, "-m", "pip", "install", "-r", requirements_file]
         print("Running command:", " ".join(cmd))

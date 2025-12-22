@@ -3,11 +3,10 @@ from tkinter import messagebox
 from config import ItemConfig, UIConfig
 from managers.shop_manager import ShopManager
 from managers.data_manager import save_player
-# === 引入归并排序 ===
 from data_structures.sort_algorithms import merge_sort
 from data_structures.sort_algorithms import merge_sort
 
-# --- 辅助绘图函数 (保持不变) ---
+# --- 辅助绘图函数---
 def draw_rounded_rect(canvas, x, y, w, h, r, fill, outline=""):
     canvas.create_arc(x, y, x+2*r, y+2*r, start=90, extent=90, fill=fill, outline=outline)
     canvas.create_arc(x+w-2*r, y, x+w, y+2*r, start=0, extent=90, fill=fill, outline=outline)
@@ -59,7 +58,7 @@ class ShopWindow:
         self.shop_manager = ShopManager()
         self.window = tk.Toplevel(master)
         self.window.title("道具商城")
-        self.window.geometry("500x650") # 增加高度以容纳排序按钮
+        self.window.geometry("500x650")
         self.window.config(bg='#E0F7FA')
         self.window.transient(master)
         self.window.grab_set()
@@ -153,8 +152,7 @@ class ShopWindow:
 
         # 获取原始字典数据
         raw_items = self.shop_manager.get_items() or ItemConfig.ITEMS
-        
-        # 将字典转为列表，并保留 key 作为 item_id
+
         items_list = []
         for k, v in raw_items.items():
             item_copy = v.copy()
@@ -166,7 +164,6 @@ class ShopWindow:
             items_list = merge_sort(items_list, lambda x: x['price'], reverse=False)
         elif self.sort_mode == 2: # 降序
             items_list = merge_sort(items_list, lambda x: x['price'], reverse=True)
-        # sort_mode == 0: 保持默认字典序/读取序
 
         col_count = 0
         row_count = 0

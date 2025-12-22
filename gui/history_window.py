@@ -1,6 +1,5 @@
 """
-历史记录窗口 - v4.1 优化版
-优化：单行列表、减少留白、标题位置
+历史记录窗口
 """
 
 import tkinter as tk
@@ -71,7 +70,6 @@ class HistoryWindow:
         canvas.pack(side="left", fill="both", expand=True)
         scrollbar.pack(side="right", fill="y")
 
-        # 核心修改：使用 get_all_records() 代替直接访问 Queue
         raw_records = self.player.get_all_records()
         records = sorted(raw_records, key=lambda r: r.get('timestamp', 0), reverse=True)
         

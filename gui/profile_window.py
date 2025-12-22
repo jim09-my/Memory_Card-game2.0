@@ -1,5 +1,5 @@
 """
-个人档案窗口 - v4.3 修复版
+个人档案窗口
 """
 
 import tkinter as tk
@@ -35,7 +35,7 @@ class ProfileWindow:
         self._create_back_button()
         self._create_stats_grid()
         
-        # === Top 5 展示 (Heap 可视化，移除技术性文字) ===
+        # === Top 5 展示 ===
         self._create_heap_display()
 
     def _center_window(self):
@@ -89,7 +89,7 @@ class ProfileWindow:
             ("通关数", str(stats['completed_games']), '#66BB6A'),
             ("当前积分", str(self.player.points), '#FFA726'),
             ("连续登录", f"{self.player.consecutive_days}天", '#EC407A'),
-            ("等级", f"Lv.{self.player.level}", '#AB47BC'), # 修改点：最佳时间 -> 等级
+            ("等级", f"Lv.{self.player.level}", '#AB47BC'),
             ("注册日期", datetime.fromtimestamp(self.player.created_at).strftime('%y/%m/%d'), '#78909C')
         ]
         
@@ -108,8 +108,7 @@ class ProfileWindow:
     def _create_heap_display(self):
         frame = tk.Frame(self.window, bg='#E0F7FA')
         frame.place(relx=0.5, rely=0.75, anchor=tk.CENTER, width=580, height=280)
-        
-        # 移除 "(基于堆结构)"，保留核心标题
+
         tk.Label(frame, text="🏆 个人巅峰记录", font=('Arial Rounded MT Bold', 14, 'bold'), 
                  bg='#E0F7FA', fg='#00796B').pack(pady=(0, 10))
         

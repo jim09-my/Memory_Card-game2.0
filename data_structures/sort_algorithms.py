@@ -6,10 +6,6 @@
 def merge_sort(items, key_func, reverse=False):
     """
     归并排序实现
-    :param items: 待排序列表
-    :param key_func: 获取比较值的函数 (例如 lambda x: x['price'])
-    :param reverse: 是否降序
-    :return: 新的已排序列表
     """
     if len(items) <= 1:
         return items

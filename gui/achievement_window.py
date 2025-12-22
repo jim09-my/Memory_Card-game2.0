@@ -1,13 +1,12 @@
 """
-成就窗口 - 集成 Trie 树搜索版 (修复搜索框显示问题)
+成就窗口 - 集成 Trie 树搜索版
 """
 
 import tkinter as tk
 from config import UIConfig, AchievementConfig
-# 引入 Trie
 from data_structures.trie import Trie
 
-# --- 局部绘图辅助函数 (避免导入错误) ---
+# --- 局部绘图辅助函数  ---
 def draw_rounded_rect(canvas, x, y, w, h, r, fill, outline="", width=0):
     canvas.create_arc(x, y, x+2*r, y+2*r, start=90, extent=90, fill=fill, outline=outline, width=width)
     canvas.create_arc(x+w-2*r, y, x+w, y+2*r, start=0, extent=90, fill=fill, outline=outline, width=width)
@@ -32,7 +31,7 @@ class AchievementWindow:
         self.player = player
         self.window = tk.Toplevel(parent)
         self.window.title("游戏成就")
-        self.window.geometry("1000x650") # 加宽窗口，确保一行能放下
+        self.window.geometry("1000x650") 
         self.window.config(bg=UIConfig.COLORS['primary'])
         self.window.resizable(False, False)
         self.window.transient(parent)
@@ -53,9 +52,7 @@ class AchievementWindow:
         """将所有成就名称和描述关键词插入 Trie"""
         defs = getattr(AchievementConfig, 'ACHIEVEMENTS', [])
         for ach in defs:
-            # 插入名字
             self.trie.insert(ach.get('name', ''), ach)
-            # 也可以插入 ID 以支持搜 ID
             self.trie.insert(ach.get('id', ''), ach)
 
     def _create_ui(self):
@@ -65,17 +62,12 @@ class AchievementWindow:
         tk.Label(title_frame, text="🏆 游戏成就", font=('Arial Rounded MT Bold', 24, 'bold'),
                  fg='white', bg=UIConfig.COLORS['primary']).pack()
         
-        # 2. 筛选与搜索控制栏 (Container)
+        # 2. 筛选与搜索控制栏
         control_container = tk.Frame(self.window, bg=UIConfig.COLORS['primary'])
         control_container.pack(fill=tk.X, pady=(0, 15), padx=40)
         
-        # === 关键修改：先创建并 Pack 右侧搜索框，确保它优先占据空间 ===
-        
-        # 2.1 右侧：搜索框 (样式复刻标签，但更长)
-        # 注意：pack side=RIGHT 必须写在 side=LEFT 之前，或者保证空间足够
         self._create_styled_search_box(control_container)
         
-        # 2.2 左侧：分类标签容器
         self.tag_frame = tk.Frame(control_container, bg=UIConfig.COLORS['primary'])
         self.tag_frame.pack(side=tk.LEFT, fill=tk.X)
         
@@ -96,22 +88,17 @@ class AchievementWindow:
         scrollbar.pack(side='right', fill='y')
 
     def _create_styled_search_box(self, parent):
-        """创建样式与标签一致但更长的搜索框"""
-        # 尺寸定义
         w, h = 220, 32
         bg_color = 'white'
         
-        # 容器 Canvas - Pack 到右侧
         search_canvas = tk.Canvas(parent, width=w, height=h, bg=UIConfig.COLORS['primary'], highlightthickness=0)
         search_canvas.pack(side=tk.RIGHT)
-        
-        # 绘制圆角胶囊背景
+
         draw_rounded_rect(search_canvas, 0, 0, w, h, 16, fill=bg_color)
         
         # 绘制搜索图标
         search_canvas.create_text(20, h/2, text="🔍", font=('Segoe UI Emoji', 12), fill='#90A4AE')
         
-        # 嵌入 Entry 控件
         self.search_var = tk.StringVar()
         self.search_var.trace("w", self._on_search_change)
         
@@ -119,7 +106,6 @@ class AchievementWindow:
                          bd=0, bg=bg_color, fg='#546E7A',
                          font=('Arial Rounded MT Bold', 11), width=18)
         
-        # 将 Entry 放置在 Canvas 中央偏右
         search_canvas.create_window(w/2 + 10, h/2, window=entry, width=w-50, height=20)
 
     def _on_search_change(self, *args):
@@ -145,14 +131,10 @@ class AchievementWindow:
             
     def _render_achievements_list(self):
         for w in self.ach_scrollable.winfo_children(): w.destroy()
-        
-        # === 核心逻辑：结合分类筛选 + Trie 搜索 ===
-        
-        # 第一步：获取基础列表（根据搜索框）
+
         if self.search_query:
             # 使用 Trie 进行前缀搜索
             base_items = self.trie.search_prefix(self.search_query)
-            # 去重
             seen_ids = set()
             unique_items = []
             for item in base_items:
@@ -163,7 +145,7 @@ class AchievementWindow:
         else:
             items = getattr(AchievementConfig, 'ACHIEVEMENTS', [])
 
-        # 第二步：根据分类筛选
+        # 按类别过滤
         if self.current_category != '全部':
             items = [a for a in items if a.get('category') == self.current_category]
             

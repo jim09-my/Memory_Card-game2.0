@@ -8,9 +8,8 @@ import time
 from core.card import Card, CardFactory
 from core.timer import Timer
 
-# === 引入自定义数据结构 ===
 from data_structures.stack import Stack
-from data_structures.linked_list import CardList  # <--- 使用链表
+from data_structures.linked_list import CardList
 from config import AchievementConfig
 from managers.data_manager import append_record, add_unlocked_achievement, save_player
 
@@ -49,7 +48,6 @@ class Game:
         self.mistakes = 0
         self.resolving_pair = False
         
-        # === 数据结构修改：使用 CardList (链表) 替代 list ===
         self.cards = CardList() 
 
         self.timer = Timer(time_limit=self.time_limit)
@@ -58,7 +56,6 @@ class Game:
         self.is_completed = False
         self.is_failed = False
 
-        # === 数据结构修改：使用 Stack (栈) 管理撤销历史 ===
         self.move_history = Stack(max_size=10)
 
         self.items_used = {'hint': 0, 'time_extend': 0, 'shuffle_prevent': 0, 'undo': 0}
@@ -98,7 +95,6 @@ class Game:
             self.fail_game()
             return False
 
-        # === 链表适配：使用 get_size() 和 get_card() ===
         if card_index < 0 or card_index >= self.cards.get_size():
             return False
 
@@ -126,7 +122,6 @@ class Game:
             return
 
         idx1, idx2 = self.flipped_cards
-        # === 链表适配 ===
         card1 = self.cards.get_card(idx1)
         card2 = self.cards.get_card(idx2)
 
@@ -158,7 +153,6 @@ class Game:
     def flip_back_cards(self, pair=None):
         targets = pair if pair is not None else self.flipped_cards
         for idx in targets:
-            # === 链表适配 ===
             card = self.cards.get_card(idx)
             if not card.is_matched:
                 card.flip_down()
@@ -167,7 +161,6 @@ class Game:
         self.flipped_cards = []
 
     def _save_state(self):
-        # === 链表适配：获取所有卡牌数据 ===
         all_cards_data = [c.to_dict() for c in self.cards.get_all_cards()]
         
         state = {
@@ -191,7 +184,6 @@ class Game:
 
         state = self.move_history.pop()
 
-        # === 链表适配：重建链表 ===
         self.cards = CardList()
         for card_data in state['cards']:
             self.cards.add_card(Card.from_dict(card_data))
@@ -217,7 +209,6 @@ class Game:
             return False
 
         unmatched_values = {}
-        # === 链表适配 ===
         all_cards = self.cards.get_all_cards()
         for i, card in enumerate(all_cards):
             if not card.is_matched:
@@ -229,7 +220,6 @@ class Game:
             if len(indices) >= 2:
                 self.hint_cards = indices[:2]
                 for idx in self.hint_cards:
-                    # === 链表适配 ===
                     self.cards.get_card(idx).reveal()
                 
                 if self.player:
@@ -240,7 +230,6 @@ class Game:
 
     def hide_hint(self):
         for idx in self.hint_cards:
-            # === 链表适配 ===
             if idx < self.cards.get_size():
                 self.cards.get_card(idx).hide_reveal()
         self.hint_cards = []
@@ -284,10 +273,9 @@ class Game:
     def shuffle_cards(self):
         if self.shuffle_prevent_active: return False
         
-        # === 链表适配：使用链表自带的 shuffle ===
         self.cards.shuffle()
         
-        # 重新分配未匹配卡牌的值以保持公平性
+        # 重新分配未匹配卡牌的值
         all_cards = self.cards.get_all_cards()
         unmatched_indices = [i for i, c in enumerate(all_cards) if not c.is_matched]
         
@@ -325,25 +313,20 @@ class Game:
         self.timer.resume()
         return True
 
-    # === 新增：统一的成就检查函数 ===
+    # === 统一的成就检查函数 ===
     def _check_achievements(self):
-        """检查并解锁成就（支持通关和失败时调用）"""
         if not self.player:
             return
             
         try:
-            # 遍历成就配置
             for ach in getattr(AchievementConfig, 'ACHIEVEMENTS', []):
                 aid = ach.get('id')
                 if not aid or not ach.get('condition'):
                     continue
                 
-                # 如果已经拥有该成就，跳过
                 if self.player.has_achievement(aid):
                     continue
 
-                # 运行判定条件 (config.py 中定义的 lambda)
-                # 此时 self.player 已经包含了本局的记录，所以 count 类的成就能正常统计
                 if ach['condition'](self.player):
                     self.player.unlock_achievement(aid)
                     
@@ -383,8 +366,7 @@ class Game:
             
             self.player.add_game_record(record)
             self.player.add_points(reward)
-            
-            # === 修改：调用统一的检查函数 ===
+
             self._check_achievements()
             
             try: save_player(self.player)
@@ -415,10 +397,8 @@ class Game:
             try: append_record(record)
             except: pass
             
-            # 必须先添加记录，否则 'first_game' 或 'persistent_50' 等基于次数的成就无法检测到本局
             self.player.add_game_record(record)
             
-            # === 修改：失败时也检查成就 (修复如"毅力十足"累计场次不触发的问题) ===
             self._check_achievements()
 
             try: save_player(self.player)
@@ -472,13 +452,11 @@ class Game:
 
     def get_card_at(self, row, col):
         index = row * self.grid_size + col
-        # === 链表适配 ===
         if 0 <= index < self.cards.get_size():
             return self.cards.get_card(index)
         return None
 
     def get_card_by_index(self, index):
-        # === 链表适配 ===
         if 0 <= index < self.cards.get_size():
             return self.cards.get_card(index)
         return None

@@ -1,8 +1,5 @@
 """
-游戏窗口 - v4.3 修复版
-修复：游戏结束后自动关闭窗口，确保单窗口运行
-修复：战败/中途退出无法记录战绩的问题
-修复：代码缩进错误
+游戏窗口 
 """
 
 import tkinter as tk
@@ -360,8 +357,7 @@ class GameWindow:
             reward = last.get('reward', 0) if (last and last.get('completed')) else self.game._calculate_reward(int(self.game.timer.get_elapsed_time()))
         except:
             reward = self.game._calculate_reward(int(self.game.timer.get_elapsed_time()))
-            
-        # === 修复：通关后强制保存，防止丢失 ===
+
         save_player(self.player)
 
         messagebox.showinfo("恭喜", f"通关成功！\n获得积分: {reward}")
@@ -385,7 +381,6 @@ class GameWindow:
         if self._end_handled: return
         self._end_handled = True
         
-        # === 修复开始：构建战败记录并保存 ===
         if self.game and self.game.timer:
             self.game.timer.stop() # 停止计时
 
@@ -404,7 +399,6 @@ class GameWindow:
         
         # 3. 强制写入文件
         save_player(self.player)
-        # === 修复结束 ===
 
         messagebox.showinfo("遗憾", "时间到了，挑战失败！")
         
@@ -421,7 +415,6 @@ class GameWindow:
             try: self.player.remove_change_listener(self._on_player_change)
             except: pass
         
-        # === 修复：中途关闭窗口也算战败/放弃 ===
         if self.game and self.game.is_started and not self._end_handled:
             # 停止计时
             if self.game.timer: self.game.timer.stop()

@@ -4,7 +4,6 @@ from config import UIConfig
 
 # --- 绘图辅助函数 ---
 def draw_rounded_rect(canvas, x, y, w, h, r, fill, outline="", tags="bg_rect"):
-    """绘制圆角矩形"""
     x, y = x+1, y+1
     w, h = w-2, h-2
     canvas.delete(tags)
@@ -185,14 +184,13 @@ class ManualWindow:
 
     def _fill_content(self, text_widget, key):
         # --- 标签样式配置 ---
-        # H1: 大标题
+        # H1
         text_widget.tag_configure("h1", font=("Microsoft YaHei UI", 16, "bold"), foreground="#00897B", spacing3=10)
         
-        # H2: 二级标题 (间距调整)
+        # H2
         text_widget.tag_configure("h2", font=("Microsoft YaHei UI", 13, "bold"), foreground="#00695C", 
                                   spacing1=15, spacing3=5)
-        
-        # H3: 三级标题 (用于替代之前的 ####, 字体稍小但加粗)
+        # H3
         text_widget.tag_configure("h3", font=("Microsoft YaHei UI", 12, "bold"), foreground="#00796B", 
                                   spacing1=10, spacing3=2)
         
@@ -200,10 +198,10 @@ class ManualWindow:
         
         text_widget.tag_configure("highlight", foreground="#EF6C00", font=("Microsoft YaHei UI", 11, "bold"))
         
-        # 加粗文本 (替代 ** **)
+        # 加粗文本
         text_widget.tag_configure("bold_text", font=("Microsoft YaHei UI", 11, "bold"), foreground="#37474F")
         
-        # 列表项 (带缩进)
+        # 列表项
         text_widget.tag_configure("tip_item", 
                                   font=("Microsoft YaHei UI", 11), 
                                   foreground="#37474F",
@@ -258,9 +256,8 @@ class ManualWindow:
         t.insert(tk.END, "• 创建个人账号保存游戏进度\n", "tip_item")
         t.insert(tk.END, "• 账号数据自动保存\n\n", "tip_item")
         
-        # --- 修复：注意事项与列表空隙缩小 ---
         t.insert(tk.END, "注意事项：\n", "bold_text")
-        # 移除前面的 \n，减小空隙
+
         t.insert(tk.END, "• 请妥善保管您的账号信息\n", "tip_item")
         t.insert(tk.END, "• 如忘记密码，请联系管理员处理\n", "tip_item")
 

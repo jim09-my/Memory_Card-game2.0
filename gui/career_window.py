@@ -6,7 +6,7 @@ from managers.data_manager import load_records
 from data_structures.binary_tree import Leaderboard
 from data_structures.trie import Trie 
 
-# --- 绘图辅助函数 (保持不变) ---
+# --- 绘图辅助函数---
 def draw_rounded_rect(canvas, x, y, w, h, r, fill, outline="", width=0):
     canvas.create_arc(x, y, x+2*r, y+2*r, start=90, extent=90, fill=fill, outline=outline, width=width)
     canvas.create_arc(x+w-2*r, y, x+w, y+2*r, start=0, extent=90, fill=fill, outline=outline, width=width)
@@ -29,7 +29,7 @@ def draw_shadow_card(canvas, x, y, w, h, r, bg_color, shadow_color='#CFD8DC', of
     draw_rounded_rect(canvas, x+offset, y+offset, w, h, r, shadow_color)
     draw_rounded_rect(canvas, x, y, w, h, r, bg_color)
 
-# --- 组件类 (保持不变) ---
+# --- 组件类  ---
 class CandyTabButton(tk.Canvas):
     def __init__(self, master, text, command=None, width=130, height=50, theme='yellow', active=False):
         super().__init__(master, width=width, height=height, 
@@ -94,7 +94,6 @@ class CategoryTag(tk.Canvas):
         bg_col = '#00796B' if self.selected else '#E0E0E0'
         fg_col = 'white' if self.selected else '#757575'
         draw_rounded_rect(self, 0, 0, w, h, 14, bg_col)
-        # 统一使用标准字体
         self.create_text(w/2, h/2, text=self.text, fill=fg_col, font=('Arial', 10, 'bold' if self.selected else 'normal'))
 
 
@@ -223,8 +222,7 @@ class CareerWindow:
     def _build_records(self, parent):
         control_frame = tk.Frame(parent, bg=UIConfig.COLORS['primary'])
         control_frame.pack(fill=tk.X, pady=(0, 10), padx=30)
-        
-        # 移除 "(AVL Tree)" 文字，保持简洁
+
         tk.Label(control_frame, text="排序方式:", font=('Arial', 10, 'bold'), 
                  bg=UIConfig.COLORS['primary'], fg='white').pack(side=tk.LEFT)
                  

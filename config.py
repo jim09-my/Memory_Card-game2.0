@@ -6,7 +6,6 @@ from datetime import datetime
 # ============== 1. 路径处理工具函数 ==============
 
 def get_app_data_path():
-    # 使用原始字符串 r"" 防止转义错误
     r"""
     获取跨平台的用户数据存储路径 (用于存放 json 存档)
     Windows: C:\Users\用户名\AppData\Roaming\MemoryCardGame
@@ -31,28 +30,23 @@ def get_app_data_path():
 
 def get_resource_path(relative_path):
     """
-    获取静态资源绝对路径 (用于存放 assets)
-    兼容开发环境和 PyInstaller 打包后的 _MEIxxxx 临时目录
+    获取静态资源绝对路径
     """
     if getattr(sys, 'frozen', False):
-        # 打包后：基准路径是临时解压目录
         base_path = sys._MEIPASS
     else:
-        # 开发环境：基准路径是当前文件所在目录
         base_path = os.path.dirname(os.path.abspath(__file__))
         
     return os.path.join(base_path, relative_path)
 
 # ============== 2. 全局目录配置 ==============
-# 动态数据目录 (读写)
 BASE_DATA_DIR = get_app_data_path()
-_GLOBAL_DATA_DIR = os.path.join(BASE_DATA_DIR, 'data') # 临时变量
+_GLOBAL_DATA_DIR = os.path.join(BASE_DATA_DIR, 'data') 
 
 if not os.path.exists(_GLOBAL_DATA_DIR):
     try: os.makedirs(_GLOBAL_DATA_DIR)
     except: pass
 
-# 静态资源目录 (只读)
 ASSETS_DIR = get_resource_path('assets')
 IMAGES_DIR = os.path.join(ASSETS_DIR, 'images')
 SOUNDS_DIR = os.path.join(ASSETS_DIR, 'sounds')
@@ -327,7 +321,6 @@ class PokerConfig:
 
 # ============== 8. 数据文件路径定义 ==============
 class DataConfig:
-    # --- 关键修复：将全局 DATA_DIR 赋值给类属性 ---
     DATA_DIR = _GLOBAL_DATA_DIR 
     
     PLAYERS_FILE = os.path.join(DATA_DIR, 'players.json')

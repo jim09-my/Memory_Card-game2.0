@@ -21,7 +21,6 @@ class Stack:
     def __init__(self, max_size=None):
         """
         初始化栈
-        :param max_size: 最大容量，None表示无限制
         """
         self.top = None
         self.size = 0
@@ -40,8 +39,6 @@ class Stack:
     def push(self, data):
         """
         入栈操作
-        :param data: 要入栈的数据
-        :return: 成功返回True，失败返回False
         """
         if self.is_full():
             print(f"栈已满，无法压入数据！当前大小：{self.size}")
@@ -56,7 +53,6 @@ class Stack:
     def pop(self):
         """
         出栈操作
-        :return: 栈顶元素，栈空则返回None
         """
         if self.is_empty():
             print("栈为空，无法弹出数据！")
@@ -70,7 +66,6 @@ class Stack:
     def peek(self):
         """
         查看栈顶元素但不删除
-        :return: 栈顶元素，栈空则返回None
         """
         if self.is_empty():
             return None
@@ -122,7 +117,6 @@ class GameStateStack:
     def save_state(self, game_state):
         """
         保存游戏状态
-        :param game_state: 游戏状态字典
         """
         state_copy = game_state.copy()
         self.states.push(state_copy)
@@ -131,7 +125,6 @@ class GameStateStack:
     def undo(self):
         """
         撤销到上一个状态
-        :return: 上一个游戏状态，无法撤销则返回None
         """
         if self.states.is_empty():
             print("没有可撤销的操作！")
@@ -166,7 +159,7 @@ if __name__ == '__main__':
         print(f"   压入 {i * 10}，栈大小：{stack.get_size()}")
 
     print(f"\n2. 栈满测试：")
-    stack.push(60)  # 应该失败
+    stack.push(60) 
 
     print(f"\n3. 查看栈顶：{stack.peek()}")
 
@@ -176,7 +169,7 @@ if __name__ == '__main__':
         print(f"   弹出 {data}，剩余大小：{stack.get_size()}")
 
     print(f"\n5. 空栈测试：")
-    stack.pop()  # 应该失败
+    stack.pop()
 
     # 测试游戏状态栈
     print("\n" + "=" * 50)

@@ -29,7 +29,6 @@ class LinkedList:
     def append(self, data):
         """
         在链表末尾添加节点
-        :param data: 节点数据
         """
         new_node = Node(data)
 
@@ -46,7 +45,6 @@ class LinkedList:
     def prepend(self, data):
         """
         在链表开头添加节点
-        :param data: 节点数据
         """
         new_node = Node(data)
         new_node.next = self.head
@@ -56,8 +54,6 @@ class LinkedList:
     def insert(self, index, data):
         """
         在指定位置插入节点
-        :param index: 插入位置
-        :param data: 节点数据
         """
         if index < 0 or index > self.size:
             print(f"索引 {index} 超出范围")
@@ -81,8 +77,6 @@ class LinkedList:
     def delete(self, data):
         """
         删除第一个匹配的节点
-        :param data: 要删除的数据
-        :return: 成功返回True，失败返回False
         """
         if self.is_empty():
             return False
@@ -107,8 +101,6 @@ class LinkedList:
     def delete_at(self, index):
         """
         删除指定位置的节点
-        :param index: 节点位置
-        :return: 删除的数据，失败返回None
         """
         if index < 0 or index >= self.size:
             print(f"索引 {index} 超出范围")
@@ -132,8 +124,6 @@ class LinkedList:
     def search(self, data):
         """
         查找节点
-        :param data: 要查找的数据
-        :return: 节点索引，未找到返回-1
         """
         current = self.head
         index = 0
@@ -149,8 +139,6 @@ class LinkedList:
     def get(self, index):
         """
         获取指定位置的数据
-        :param index: 节点位置
-        :return: 节点数据，失败返回None
         """
         if index < 0 or index >= self.size:
             return None
@@ -164,9 +152,6 @@ class LinkedList:
     def update(self, index, data):
         """
         更新指定位置的数据
-        :param index: 节点位置
-        :param data: 新数据
-        :return: 成功返回True，失败返回False
         """
         if index < 0 or index >= self.size:
             return False

@@ -4,9 +4,8 @@
 import json
 import os
 import sys
-import shutil  # <--- 新增：用于复制文件
+import shutil 
 
-# --- 路径修复 ---
 if getattr(sys, 'frozen', False):
     sys.path.append(os.path.dirname(sys.executable))
 else:
@@ -17,24 +16,17 @@ from gui.login_window import LoginWindow
 from gui.main_window import MainWindow
 
 def get_bundled_data_path(filename):
-    """
-    获取打包在 exe 内部的 'initial_data' 文件夹路径
-    用于首次运行时恢复旧数据
-    """
+
     if getattr(sys, 'frozen', False):
-        # 打包环境：在临时解压目录下的 initial_data 文件夹
         base_path = os.path.join(sys._MEIPASS, 'initial_data')
     else:
-        # 开发环境：直接指向当前的 data 文件夹
         base_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'data')
     
     return os.path.join(base_path, filename)
 
 def ensure_data_files():
     """
-    初始化数据文件：
-    如果 AppData 里没有存档，优先从打包的资源里复制旧存档（继承数据），
-    如果包里也没有，才创建空的默认文件。
+    初始化数据文件
     """
     # 目标目录 (AppData)
     target_dir = DataConfig.DATA_DIR
@@ -48,7 +40,6 @@ def ensure_data_files():
             print(f"创建目录失败: {e}")
 
     # 2. 定义需要管理的文件列表
-    # 键是目标路径，值是如果完全找不到时的“保底”空内容
     files_to_check = {
         DataConfig.PLAYERS_FILE: {},
         DataConfig.RECORDS_FILE: [],
@@ -58,7 +49,6 @@ def ensure_data_files():
                                
     # 3. 循环检查
     for target_path, default_content in files_to_check.items():
-        # 如果 AppData 里已经有这个文件了，说明用户玩过，跳过
         if os.path.exists(target_path):
             continue
 
@@ -68,12 +58,10 @@ def ensure_data_files():
         bundled_source = get_bundled_data_path(filename)
 
         try:
-            # 策略 A：尝试从包里复制旧数据 (继承你的记录)
             if os.path.exists(bundled_source):
                 shutil.copy2(bundled_source, target_path)
                 print(f"✨ 已从安装包恢复数据: {filename}")
             
-            # 策略 B：包里也没有 (完全全新的安装)，创建空文件
             elif default_content is not None:
                 with open(target_path, 'w', encoding='utf-8') as f:
                     json.dump(default_content, f, indent=2, ensure_ascii=False)

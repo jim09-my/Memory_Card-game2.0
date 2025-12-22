@@ -7,7 +7,6 @@
 class MinHeap:
     """
     最小堆实现
-    父节点总是小于或等于子节点
     """
 
     def __init__(self):
@@ -39,7 +38,6 @@ class MinHeap:
     def insert(self, item):
         """
         插入元素
-        :param item: 要插入的元素（可以是元组 (key, data)）
         """
         self.heap.append(item)
         self.size += 1
@@ -56,7 +54,6 @@ class MinHeap:
     def extract_min(self):
         """
         删除并返回最小值
-        :return: 最小值，堆空则返回None
         """
         if self.is_empty():
             return None
@@ -100,7 +97,6 @@ class MinHeap:
     def build_heap(self, items):
         """
         从数组构建堆
-        :param items: 元素列表
         """
         self.heap = items.copy()
         self.size = len(items)
@@ -112,8 +108,6 @@ class MinHeap:
     def heap_sort(self, items):
         """
         堆排序
-        :param items: 要排序的列表
-        :return: 排序后的列表
         """
         self.build_heap(items)
         sorted_list = []
@@ -189,15 +183,12 @@ class PriorityQueue:
     def enqueue(self, item, priority):
         """
         入队
-        :param item: 数据
-        :param priority: 优先级（数值越小优先级越高）
         """
         self.heap.insert((priority, item))
 
     def dequeue(self):
         """
         出队（返回优先级最高的元素）
-        :return: 元素数据，队空则返回None
         """
         result = self.heap.extract_min()
         return result[1] if result else None
@@ -230,21 +221,17 @@ class TopNRecords:
     def __init__(self, n=10, mode='min'):
         """
         初始化TOP N管理器
-        :param n: 保留的记录数量
-        :param mode: 'min'(保留最小的N个) 或 'max'(保留最大的N个)
         """
         self.n = n
         self.mode = mode
 
-        # 保留最小的N个：使用最大堆（堆顶是N个中最大的）
-        # 保留最大的N个：使用最小堆（堆顶是N个中最小的）
+        # 保留最小的N个：使用最大堆
+        # 保留最大的N个：使用最小堆
         self.heap = MaxHeap() if mode == 'min' else MinHeap()
 
     def add_record(self, value, data):
         """
         添加记录
-        :param value: 比较值（如时间、分数）
-        :param data: 记录数据
         """
         if self.heap.get_size() < self.n:
             # 未满，直接插入
@@ -269,8 +256,7 @@ class TopNRecords:
 
     def get_top_n(self):
         """
-        获取TOP N记录（已排序）
-        :return: 记录列表
+        获取TOP N记录
         """
         records = self.heap.to_list()
 
@@ -285,7 +271,6 @@ class TopNRecords:
     def get_best(self):
         """
         获取最佳记录
-        :return: 最佳记录
         """
         records = self.get_top_n()
         return records[0] if records else None
@@ -308,9 +293,6 @@ class GameEventQueue:
     def add_event(self, event_type, priority, data=None):
         """
         添加事件
-        :param event_type: 事件类型
-        :param priority: 优先级（1-10，1最高）
-        :param data: 事件数据
         """
         self.event_id += 1
         event = {
@@ -324,7 +306,6 @@ class GameEventQueue:
     def process_next_event(self):
         """
         处理下一个事件
-        :return: 事件对象，队列空则返回None
         """
         event = self.queue.dequeue()
         if event:
